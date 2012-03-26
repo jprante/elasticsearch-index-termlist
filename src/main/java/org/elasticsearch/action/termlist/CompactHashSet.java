@@ -24,6 +24,13 @@ import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+/**
+ * CompactHashSet - implementation taken from 
+ * http://code.google.com/p/ontopia/source/browse/trunk/ontopia/src/java/net/ontopia/utils/CompactHashSet.java?r=1704
+ * (License Apache 2.0)
+ * load factor increased to 0.9
+ * 
+ */
 public class CompactHashSet extends AbstractSet {
 
     private final static int INITIAL_SIZE = 3;

@@ -44,7 +44,7 @@ class ShardTermlistResponse extends BroadcastShardOperationResponse {
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
         int n = in.readInt();
-        termlist = new CompactHashSet();
+        termlist = new CompactHashSet(n);
         for (int i = 0; i <n; i++) {
             termlist.add(in.readUTF());
         }        

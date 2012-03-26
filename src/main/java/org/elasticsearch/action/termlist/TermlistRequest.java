@@ -26,6 +26,8 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 
 public class TermlistRequest extends BroadcastOperationRequest {
 
+    private String field;
+    
     TermlistRequest() {
     }
     
@@ -34,13 +36,23 @@ public class TermlistRequest extends BroadcastOperationRequest {
         operationThreading(BroadcastOperationThreading.THREAD_PER_SHARD);
     }
     
+    public void setField(String field) {
+        this.field = field;
+    }
+    
+    public String getField() {
+        return field;
+    }
+    
     @Override
      public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
+        field = in.readUTF();
       }
      
     @Override
      public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
+        out.writeUTF(field);
      }
 }

@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.elasticsearch</groupId>
     <artifactId>elasticsearch-index-termlist</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <name>Elastic Search Index Termlist Plugin</name>
     <packaging>jar</packaging>
     <dependencies>

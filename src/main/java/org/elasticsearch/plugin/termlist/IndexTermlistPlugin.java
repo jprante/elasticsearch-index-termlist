@@ -1,9 +1,8 @@
 package org.elasticsearch.plugin.termlist;
 
-import java.util.Collection;
-import org.elasticsearch.common.collect.Lists;
-import org.elasticsearch.common.inject.Module;
-import org.elasticsearch.module.termlist.TermlistModule;
+import org.elasticsearch.action.ActionModule;
+import org.elasticsearch.action.termlist.TermlistAction;
+import org.elasticsearch.action.termlist.TransportTermlistAction;
 import org.elasticsearch.plugins.AbstractPlugin;
 import org.elasticsearch.rest.RestModule;
 import org.elasticsearch.rest.action.termlist.RestTermlistAction;
@@ -24,10 +23,8 @@ public class IndexTermlistPlugin extends AbstractPlugin {
         module.addRestAction(RestTermlistAction.class);
     }
 
-    @Override 
-    public Collection<Class<? extends Module>> modules() {
-        Collection<Class<? extends Module>> modules = Lists.newArrayList();
-        modules.add(TermlistModule.class);
-        return modules;
-    }    
+    public void onModule(ActionModule module) {
+        module.registerAction(TermlistAction.INSTANCE, TransportTermlistAction.class);        
+    }
+    
 }

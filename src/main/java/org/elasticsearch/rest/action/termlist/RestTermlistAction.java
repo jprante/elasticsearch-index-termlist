@@ -42,46 +42,43 @@ public class RestTermlistAction extends BaseRestHandler {
         super(settings, client);
         controller.registerHandler(POST, "/_termlist", this);
         controller.registerHandler(POST, "/{index}/_termlist", this);
+        controller.registerHandler(POST, "/_termlist/{field}", this);
+        controller.registerHandler(POST, "/{index}/_termlist/{field}", this);
         controller.registerHandler(GET, "/_termlist", this);
         controller.registerHandler(GET, "/{index}/_termlist", this);
+        controller.registerHandler(GET, "/_termlist/{field}", this);
+        controller.registerHandler(GET, "/{index}/_termlist/{field}", this);
     }
 
     @Override
     public void handleRequest(final RestRequest request, final RestChannel channel) {
         TermlistRequest termlistRequest = new TermlistRequest(RestActions.splitIndices(request.param("index")));
-        try {
-            client.execute(TermlistAction.INSTANCE, termlistRequest, new ActionListener<TermlistResponse>() {
+        termlistRequest.setField(request.param("field"));
+        client.execute(TermlistAction.INSTANCE, termlistRequest, new ActionListener<TermlistResponse>() {
 
-                @Override
-                public void onResponse(TermlistResponse response) {
-                    try {
-                        XContentBuilder builder = RestXContentBuilder.restContentBuilder(request);
-                        builder.startObject();
-                        builder.field("ok", true);
-                        buildBroadcastShardsHeader(builder, response);
-                        builder.array("terms", response.getTermlist().toArray());
-                        builder.endObject();
-                        channel.sendResponse(new XContentRestResponse(request, OK, builder));
-                    } catch (Exception e) {
-                        onFailure(e);
-                    }
+            @Override
+            public void onResponse(TermlistResponse response) {
+                try {
+                    XContentBuilder builder = RestXContentBuilder.restContentBuilder(request);
+                    builder.startObject();
+                    builder.field("ok", true);
+                    buildBroadcastShardsHeader(builder, response);
+                    builder.array("terms", response.getTermlist().toArray());
+                    builder.endObject();
+                    channel.sendResponse(new XContentRestResponse(request, OK, builder));
+                } catch (Exception e) {
+                    onFailure(e);
                 }
-
-                @Override
-                public void onFailure(Throwable e) {
-                    try {
-                        channel.sendResponse(new XContentThrowableRestResponse(request, e));
-                    } catch (IOException e1) {
-                        logger.error("Failed to send failure response", e1);
-                    }
-                }
-            });
-        } catch (Exception e) {
-            try {
-                channel.sendResponse(new XContentThrowableRestResponse(request, e));
-            } catch (IOException e1) {
-                logger.error("Failed to send failure response", e1);
             }
-        }
+
+            @Override
+            public void onFailure(Throwable e) {
+                try {
+                    channel.sendResponse(new XContentThrowableRestResponse(request, e));
+                } catch (IOException e1) {
+                    logger.error("Failed to send failure response", e1);
+                }
+            }
+        });
     }
 }

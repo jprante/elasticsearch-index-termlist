@@ -25,20 +25,33 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 
 class ShardTermlistRequest extends BroadcastShardOperationRequest {
 
+    private String field;
+    
     ShardTermlistRequest() {
     }
 
     public ShardTermlistRequest(String index, int shardId, TermlistRequest request) {
         super(index, shardId);
+        this.field = request.getField();
     }
+    
+    public void setField(String field) {
+        this.field = field;
+    }
+    
+    public String getField() {
+        return field;
+    }    
 
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
+        field = in.readUTF();
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
+        out.writeUTF(field);
     }
 }

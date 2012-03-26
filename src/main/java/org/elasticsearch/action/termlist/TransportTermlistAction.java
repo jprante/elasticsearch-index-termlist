@@ -133,7 +133,9 @@ public class TransportTermlistAction
                 do {
                     Term t = te.term();
                     if (t != null && t.field().charAt(0) != '_') {
-                        set.add(t.text());
+                        if (request.getField() == null || t.field().equals(request.getField())) {
+                            set.add(t.text());
+                        }
                     }
                 } while (te.next());
                 te.close();
