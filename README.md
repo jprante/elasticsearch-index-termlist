@@ -1,12 +1,20 @@
 Elasticsearch Index Termlist Plugin
-----------------------------------
+-----------------------------------
 
 This plugin extends Elasticsearch with a term list capability. Term lists can be generated from indexes, or even of all of the indexes in the cluster.
 
 Installation
 ------------
 
-	bin/plugin -install jprante/elasticsearch-index-termlist/1.1.0
+In order to install the plugin, simply run: `bin/plugin -install jprante/elasticsearch-termlist/1.2.0`.
+
+    ---------------------------------------
+    | Termlist Plugin | ElasticSearch     |
+    ---------------------------------------
+    | 1.2.0            | 0.20             |
+    ---------------------------------------
+    | 1.1.0            | 0.19             |
+    ---------------------------------------
 
 Introduction
 ------------

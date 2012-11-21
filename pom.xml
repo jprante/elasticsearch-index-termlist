@@ -2,38 +2,45 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <groupId>org.elasticsearch</groupId>
     <artifactId>elasticsearch-index-termlist</artifactId>
-    <version>1.1.0</version>
-    <name>Elastic Search Index Termlist Plugin</name>
+    <version>1.2.0</version>
+    <name>elasticsearch-index-termlist</name>
     <packaging>jar</packaging>
+
+    <properties>
+        <elasticsearch.version>0.20.0.Beta1-SNAPSHOT</elasticsearch.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.elasticsearch</groupId>
             <artifactId>elasticsearch</artifactId>
-            <version>0.19.1</version>
+            <version>${elasticsearch.version}</version>
         </dependency>
     </dependencies>
-  <build>
-    <plugins>
-      <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <descriptors>
-            <descriptor>${basedir}/src/main/assemblies/plugin.xml</descriptor>
-          </descriptors>
-          <finalName>${project.artifactId}-${project.version}</finalName>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-     </plugins>
-   </build>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptors>
+                        <descriptor>${basedir}/src/main/assemblies/plugin.xml</descriptor>
+                    </descriptors>
+                    <finalName>${project.artifactId}-${project.version}</finalName>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
 

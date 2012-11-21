@@ -20,42 +20,21 @@
 package org.elasticsearch.action.termlist;
 
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.support.BaseRequestBuilder;
-import org.elasticsearch.action.support.broadcast.BroadcastOperationThreading;
+import org.elasticsearch.action.support.broadcast.BroadcastOperationRequestBuilder;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.client.internal.InternalGenericClient;
 
 /**
  * A request to get termlists of one or more indices.
  */
-public class TermlistRequestBuilder extends BaseRequestBuilder<TermlistRequest, TermlistResponse> {
+public class TermlistRequestBuilder extends BroadcastOperationRequestBuilder<TermlistRequest, TermlistResponse, TermlistRequestBuilder> {
 
-    public TermlistRequestBuilder(Client indicesClient) {
-        super(indicesClient, new TermlistRequest());
-    }
-
-    public TermlistRequestBuilder setIndices(String... indices) {
-        request.indices(indices);
-        return this;
-    }
-
-    /**
-     * Should the listener be called on a separate thread if needed.
-     */
-    public TermlistRequestBuilder setListenerThreaded(boolean threadedListener) {
-        request.listenerThreaded(threadedListener);
-        return this;
-    }
-
-    /**
-     * Controls the operation threading model.
-     */
-    public TermlistRequestBuilder setOperationThreading(BroadcastOperationThreading operationThreading) {
-        request.operationThreading(operationThreading);
-        return this;
+    public TermlistRequestBuilder(InternalGenericClient client) {
+        super(client, new TermlistRequest());
     }
 
     @Override
     protected void doExecute(ActionListener<TermlistResponse> listener) {
-        client.execute(TermlistAction.INSTANCE, request, listener);
+        ((Client)client).execute(TermlistAction.INSTANCE, request, listener);
     }
 }

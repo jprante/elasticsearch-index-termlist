@@ -24,7 +24,7 @@ import org.elasticsearch.action.support.broadcast.BroadcastOperationThreading;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 
-public class TermlistRequest extends BroadcastOperationRequest {
+public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> {
 
     private String field;
     

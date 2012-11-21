@@ -39,7 +39,7 @@ import static org.elasticsearch.common.collect.Lists.newArrayList;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.engine.Engine;
-import org.elasticsearch.index.shard.service.IndexShard;
+import org.elasticsearch.index.shard.service.InternalIndexShard;
 import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
@@ -125,7 +125,8 @@ public class TransportTermlistAction
     @Override
     protected ShardTermlistResponse shardOperation(ShardTermlistRequest request) throws ElasticSearchException {
         synchronized (termlistMutex) {
-            IndexShard indexShard = indicesService.indexServiceSafe(request.index()).shardSafe(request.shardId());
+            InternalIndexShard indexShard = (InternalIndexShard)indicesService.indexServiceSafe(request.index()).shardSafe(request.shardId());
+            indexShard.store().directory();
             Engine.Searcher searcher = indexShard.searcher();
             try {
                 Set<String> set = new CompactHashSet();

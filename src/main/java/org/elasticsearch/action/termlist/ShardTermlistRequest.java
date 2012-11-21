@@ -31,7 +31,7 @@ class ShardTermlistRequest extends BroadcastShardOperationRequest {
     }
 
     public ShardTermlistRequest(String index, int shardId, TermlistRequest request) {
-        super(index, shardId);
+        super(index, shardId, request);
         this.field = request.getField();
     }
     
