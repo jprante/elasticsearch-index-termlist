@@ -46,7 +46,7 @@ class ShardTermlistResponse extends BroadcastShardOperationResponse {
         int n = in.readInt();
         termlist = new CompactHashSet(n);
         for (int i = 0; i <n; i++) {
-            termlist.add(in.readUTF());
+            termlist.add(in.readString());
         }        
     }
 
@@ -55,7 +55,7 @@ class ShardTermlistResponse extends BroadcastShardOperationResponse {
         super.writeTo(out);
         out.writeInt(termlist.size());
         for (String t : termlist) {
-            out.writeUTF(t);
+            out.writeString(t);
         }
     }
 }

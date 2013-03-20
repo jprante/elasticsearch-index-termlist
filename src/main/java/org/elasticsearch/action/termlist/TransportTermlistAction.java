@@ -19,11 +19,16 @@
 package org.elasticsearch.action.termlist;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReferenceArray;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.index.TermEnum;
+
+import org.apache.lucene.index.Fields;
+import org.apache.lucene.index.MultiFields;
+import org.apache.lucene.index.Terms;
+import org.apache.lucene.index.TermsEnum;
+import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.ElasticSearchException;
 import org.elasticsearch.action.ShardOperationFailedException;
 import org.elasticsearch.action.support.DefaultShardOperationFailedException;
@@ -130,16 +135,27 @@ public class TransportTermlistAction
             Engine.Searcher searcher = indexShard.searcher();
             try {
                 Set<String> set = new CompactHashSet();
-                TermEnum te = searcher.reader().terms();
-                do {
-                    Term t = te.term();
-                    if (t != null && t.field().charAt(0) != '_') {
-                        if (request.getField() == null || t.field().equals(request.getField())) {
-                            set.add(t.text());
+
+                Fields fields = MultiFields.getFields(searcher.reader());
+                if (fields != null) {
+                    for (Iterator<String> it = fields.iterator(); it.hasNext(); ) {
+                        String field = it.next();
+                        if (field.charAt(0) == '_') {
+                            continue;
+                        }
+                        if (request.getField() == null || field.equals(request.getField())) {
+                            Terms terms = fields.terms(field);
+                            if (terms != null) {
+                                TermsEnum termsEnum = terms.iterator(null);
+                                BytesRef text;
+                                while((text = termsEnum.next()) != null) {
+                                    set.add(text.utf8ToString());
+                                    System.out.println("field=" + field + "; text=" + text.utf8ToString());
+                                }
+                            }
                         }
                     }
-                } while (te.next());
-                te.close();
+                }
                 return new ShardTermlistResponse(request.index(), request.shardId(), set);
             } catch (IOException ex) {
                 throw new ElasticSearchException(ex.getMessage(), ex);

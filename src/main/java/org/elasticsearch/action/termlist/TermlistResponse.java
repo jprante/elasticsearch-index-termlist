@@ -52,7 +52,7 @@ public class TermlistResponse extends BroadcastOperationResponse {
        int n = in.readInt();
         termlist = new CompactHashSet();
         for (int i = 0; i <n; i++) {
-            termlist.add(in.readUTF());
+            termlist.add(in.readString());
         }
      }
 
@@ -61,7 +61,7 @@ public class TermlistResponse extends BroadcastOperationResponse {
         super.writeTo(out);
         out.writeInt(termlist.size());
         for (String t : termlist) {
-            out.writeUTF(t);
+            out.writeString(t);
         }
     }
 }
