@@ -47,12 +47,12 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
     @Override
      public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
-        field = in.readUTF();
+        field = in.readString();
       }
      
     @Override
      public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
-        out.writeUTF(field);
+        out.writeString(field);
      }
 }
