@@ -81,11 +81,6 @@ public class TransportTermlistAction
     }
 
     @Override
-    protected boolean ignoreNonActiveExceptions() {
-        return true;
-    }
-
-    @Override
     protected TermlistResponse newResponse(TermlistRequest request, AtomicReferenceArray shardsResponses, ClusterState clusterState) {
         int successfulShards = 0;
         int failedShards = 0;
@@ -130,9 +125,9 @@ public class TransportTermlistAction
     @Override
     protected ShardTermlistResponse shardOperation(ShardTermlistRequest request) throws ElasticSearchException {
         synchronized (termlistMutex) {
-            InternalIndexShard indexShard = (InternalIndexShard)indicesService.indexServiceSafe(request.index()).shardSafe(request.shardId());
+            InternalIndexShard indexShard = (InternalIndexShard) indicesService.indexServiceSafe(request.index()).shardSafe(request.shardId());
             indexShard.store().directory();
-            Engine.Searcher searcher = indexShard.searcher();
+            Engine.Searcher searcher = indexShard.acquireSearcher();
             try {
                 Set<String> set = new CompactHashSet();
 
