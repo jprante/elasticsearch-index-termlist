@@ -24,6 +24,7 @@ import org.elasticsearch.action.termlist.TermlistAction;
 import org.elasticsearch.action.termlist.TermlistRequest;
 import org.elasticsearch.action.termlist.TermlistResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -52,7 +53,8 @@ public class RestTermlistAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(final RestRequest request, final RestChannel channel) {
-        TermlistRequest termlistRequest = new TermlistRequest(RestActions.splitIndices(request.param("index")));
+        TermlistRequest termlistRequest = new TermlistRequest(
+            Strings.splitStringByCommaToArray(request.param("index")));
         termlistRequest.setField(request.param("field"));
         client.execute(TermlistAction.INSTANCE, termlistRequest, new ActionListener<TermlistResponse>() {
 
