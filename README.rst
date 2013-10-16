@@ -11,11 +11,11 @@ Prerequisites::
 
   Elasticsearch 0.90+
 
-=============  =========  =================  ============================================================
+=============  =========  =================  ===========================================================
 ES version     Plugin     Release date       Command
--------------  ---------  -----------------  ------------------------------------------------------------
+-------------  ---------  -----------------  -----------------------------------------------------------
 0.90.5         **1.3.0**  Oct 16, 2013       ./bin/plugin --url http://bit.ly/1bzHfIl --install termlist
-=============  =========  =================  ============================================================
+=============  =========  =================  ===========================================================
 
 Introduction
 ------------
@@ -37,7 +37,7 @@ Consider the following example index::
 	curl -XPUT 'http://localhost:9200/test/test/2' -d '{ "test": "Hello Jörg Prante" }'
 	curl -XPUT 'http://localhost:9200/test/test/3' -d '{ "message": "elastic search" }'
 
-Get term list of index ``test``
+Get term list of index ``test``::
 
 	curl -XGET 'http://localhost:9200/test/_termlist'
 	{"ok":true,"_shards":{"total":5,"successful":5,"failed":0},"terms":["hello","prant","world","elastic","search","jorg"]}
