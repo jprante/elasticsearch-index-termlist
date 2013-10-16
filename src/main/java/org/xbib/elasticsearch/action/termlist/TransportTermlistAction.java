@@ -1,34 +1,12 @@
-/*
- * Licensed to ElasticSearch and Shay Banon under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership. ElasticSearch licenses this
- * file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-package org.elasticsearch.action.termlist;
 
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicReferenceArray;
+package org.xbib.elasticsearch.action.termlist;
 
 import org.apache.lucene.index.Fields;
 import org.apache.lucene.index.MultiFields;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.util.BytesRef;
+
 import org.elasticsearch.ElasticSearchException;
 import org.elasticsearch.action.ShardOperationFailedException;
 import org.elasticsearch.action.support.DefaultShardOperationFailedException;
@@ -40,7 +18,6 @@ import org.elasticsearch.cluster.block.ClusterBlockException;
 import org.elasticsearch.cluster.block.ClusterBlockLevel;
 import org.elasticsearch.cluster.routing.GroupShardsIterator;
 import org.elasticsearch.cluster.routing.ShardRouting;
-import static org.elasticsearch.common.collect.Lists.newArrayList;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.engine.Engine;
@@ -48,6 +25,14 @@ import org.elasticsearch.index.shard.service.InternalIndexShard;
 import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
+
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReferenceArray;
+
+import static org.elasticsearch.common.collect.Lists.newArrayList;
 
 /**
  * Termlist index/indices action.
@@ -60,7 +45,7 @@ public class TransportTermlistAction
 
     @Inject
     public TransportTermlistAction(Settings settings, ThreadPool threadPool, ClusterService clusterService,
-            TransportService transportService, IndicesService indicesService) {
+                                   TransportService transportService, IndicesService indicesService) {
         super(settings, threadPool, clusterService, transportService);
         this.indicesService = indicesService;
     }
@@ -85,7 +70,7 @@ public class TransportTermlistAction
         int successfulShards = 0;
         int failedShards = 0;
         List<ShardOperationFailedException> shardFailures = null;
-        Set<String> termlist = new CompactHashSet();
+        Set<String> termlist = new CompactHashSet<String>();
         for (int i = 0; i < shardsResponses.length(); i++) {
             Object shardResponse = shardsResponses.get(i);
             if (shardResponse == null) {
@@ -129,8 +114,7 @@ public class TransportTermlistAction
             indexShard.store().directory();
             Engine.Searcher searcher = indexShard.acquireSearcher();
             try {
-                Set<String> set = new CompactHashSet();
-
+                Set<String> set = new CompactHashSet<String>();
                 Fields fields = MultiFields.getFields(searcher.reader());
                 if (fields != null) {
                     for (Iterator<String> it = fields.iterator(); it.hasNext(); ) {
@@ -143,7 +127,7 @@ public class TransportTermlistAction
                             if (terms != null) {
                                 TermsEnum termsEnum = terms.iterator(null);
                                 BytesRef text;
-                                while((text = termsEnum.next()) != null) {
+                                while ((text = termsEnum.next()) != null) {
                                     set.add(text.utf8ToString());
                                     System.out.println("field=" + field + "; text=" + text.utf8ToString());
                                 }

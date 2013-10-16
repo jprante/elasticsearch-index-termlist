@@ -1,67 +1,52 @@
-/*
- * Licensed to ElasticSearch and Shay Banon under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership. ElasticSearch licenses this
- * file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-package org.elasticsearch.action.termlist;
+
+package org.xbib.elasticsearch.action.termlist;
 
 import java.util.AbstractSet;
-import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 /**
- * CompactHashSet - implementation taken from 
+ * CompactHashSet - implementation taken from
  * http://code.google.com/p/ontopia/source/browse/trunk/ontopia/src/java/net/ontopia/utils/CompactHashSet.java?r=1704
  * (License Apache 2.0)
  * load factor increased to 0.9
- * 
  */
-public class CompactHashSet extends AbstractSet {
+public class CompactHashSet<E> extends AbstractSet<E>
+    implements Set<E> {
 
     private final static int INITIAL_SIZE = 3;
+
     private final static double LOAD_FACTOR = 0.9;
-    private final static Object nullObject = new Object();
-    private final static Object deletedObject = new Object();
+
+    private final E nullObject = (E) new Object();
+
+    private final E deletedObject = (E) new Object();
+
     private int elements;
+
     private int freecells;
-    private Object[] objects;
+
+    private E[] objects;
+
     private int modCount;
 
     public CompactHashSet() {
-        objects = new Object[INITIAL_SIZE];
+        objects = (E[]) new Object[INITIAL_SIZE];
         elements = 0;
         freecells = objects.length;
         modCount = 0;
     }
 
     public CompactHashSet(int size) {
-        objects = new Object[(size == 0 ? 1 : size)];
+        objects = (E[]) new Object[(size == 0 ? 1 : size)];
         elements = 0;
         freecells = objects.length;
         modCount = 0;
     }
 
-    public CompactHashSet(Collection c) {
-        this(c.size());
-        addAll(c);
-    }
-
-    public Iterator iterator() {
+    public Iterator<E> iterator() {
         return new CompactHashIterator();
     }
 
@@ -96,17 +81,17 @@ public class CompactHashSet extends AbstractSet {
     }
 
     @Override
-    public boolean add(Object o) {
-        if (o == null) {
-            o = nullObject;
+    public boolean add(E e) {
+        if (e == null) {
+            e = nullObject;
         }
-        int hash = o.hashCode();
+        int hash = e.hashCode();
         int index = (hash & 0x7FFFFFFF) % objects.length;
         int offset = 1;
         int deletedix = -1;
         while (objects[index] != null
                 && !(objects[index].hashCode() == hash
-                && objects[index].equals(o))) {
+                && objects[index].equals(e))) {
             if (objects[index] == deletedObject) {
                 deletedix = index;
             }
@@ -124,7 +109,7 @@ public class CompactHashSet extends AbstractSet {
             }
             modCount++;
             elements++;
-            objects[index] = o;
+            objects[index] = e;
             if (1 - (freecells / (double) objects.length) > LOAD_FACTOR) {
                 rehash(objects.length);
                 if (1 - (freecells / (double) objects.length) > LOAD_FACTOR) {
@@ -213,10 +198,8 @@ public class CompactHashSet extends AbstractSet {
     }
 
     protected void rehash(int newCapacity) {
-        int oldCapacity = objects.length;
         Object[] newObjects = new Object[newCapacity];
-        for (int ix = 0; ix < oldCapacity; ix++) {
-            Object o = objects[ix];
+        for (Object o : objects) {
             if (o == null || o == deletedObject) {
                 continue;
             }
@@ -234,12 +217,11 @@ public class CompactHashSet extends AbstractSet {
 
             newObjects[index] = o;
         }
-
-        objects = newObjects;
+        objects = (E[]) newObjects;
         freecells = objects.length - elements;
     }
 
-    private class CompactHashIterator implements Iterator {
+    private class CompactHashIterator implements Iterator<E> {
 
         private int index;
         private int lastReturned = -1;
@@ -248,8 +230,9 @@ public class CompactHashSet extends AbstractSet {
         public CompactHashIterator() {
             for (index = 0; index < objects.length
                     && (objects[index] == null
-                    || objects[index] == deletedObject); index++)
-        ;
+                    || objects[index] == deletedObject); index++) {
+                ;
+            }
             expectedModCount = modCount;
         }
 
@@ -257,7 +240,7 @@ public class CompactHashSet extends AbstractSet {
             return index < objects.length;
         }
 
-        public Object next() {
+        public E next() {
             if (modCount != expectedModCount) {
                 throw new ConcurrentModificationException();
             }
@@ -270,8 +253,9 @@ public class CompactHashSet extends AbstractSet {
             lastReturned = index;
             for (index += 1; index < length
                     && (objects[index] == null
-                    || objects[index] == deletedObject); index++)
-        ;
+                    || objects[index] == deletedObject); index++) {
+                ;
+            }
             if (objects[lastReturned] == nullObject) {
                 return null;
             } else {
