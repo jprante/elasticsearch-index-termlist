@@ -7,6 +7,8 @@ Term lists can be generated from indexes, or even of all of the indexes in the c
 Installation
 ------------
 
+Current version of the plugin: **1.3.0** (Oct 16, 2013)
+
 Prerequisites::
 
   Elasticsearch 0.90+
@@ -14,8 +16,20 @@ Prerequisites::
 =============  =========  =================  ===========================================================
 ES version     Plugin     Release date       Command
 -------------  ---------  -----------------  -----------------------------------------------------------
-0.90.5         **1.3.0**  Oct 16, 2013       ./bin/plugin --url http://bit.ly/1bzHfIl --install termlist
+0.90.5         **1.3.0**  Oct 16, 2013       ./bin/plugin --install termlist --url http://bit.ly/1bzHfIl
 =============  =========  =================  ===========================================================
+
+Do not forget to restart the node after installing.
+
+Project docs
+------------
+
+The Maven project site is available at `Github <http://jprante.github.io/elasticsearch-index-termlist>`_
+
+Binaries
+--------
+
+Binaries are available at `Bintray <https://bintray.com/pkg/show/general/jprante/elasticsearch-plugins/elasticsearch-index-termlist>`_
 
 Introduction
 ------------
