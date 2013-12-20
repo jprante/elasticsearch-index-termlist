@@ -7,8 +7,6 @@ Term lists can be generated from indexes, or even of all of the indexes in the c
 Installation
 ------------
 
-Current version of the plugin: **1.3.0** (Oct 16, 2013)
-
 Prerequisites::
 
   Elasticsearch 0.90+
@@ -16,7 +14,8 @@ Prerequisites::
 =============  =========  =================  ===========================================================
 ES version     Plugin     Release date       Command
 -------------  ---------  -----------------  -----------------------------------------------------------
-0.90.5         **1.3.0**  Oct 16, 2013       ./bin/plugin --install termlist --url http://bit.ly/1bzHfIl
+0.90.5         1.3.0      Oct 16, 2013       ./bin/plugin --install termlist --url http://bit.ly/1bzHfIl
+0.90.7         1.4.0      Dec 20, 2013       ./bin/plugin --install termlist --url http://bit.ly/1c70ICf
 =============  =========  =================  ===========================================================
 
 Do not forget to restart the node after installing.
@@ -42,7 +41,14 @@ Getting the list of all terms indexed is useful for variuos purposes, for exampl
 - input to linguistic analysis tools
 - for other post-processing of the indexed terms outside of Elasticsearch
 
-Example of getting term lists
+Optionally, the term list can be narrowed down to a field name. The field name is the Lucene field
+name as found in the Lucene index.
+
+Only terms of field names not starting with underscore are listed. Terms of internal fields
+like `_uid`, `_all`, or `_type` are always skipped.
+
+Example
+=======
 
 Consider the following example index::
 
@@ -54,18 +60,24 @@ Consider the following example index::
 Get term list of index ``test``::
 
 	curl -XGET 'http://localhost:9200/test/_termlist'
-	{"ok":true,"_shards":{"total":5,"successful":5,"failed":0},"terms":["hello","prant","world","elastic","search","jorg"]}
+	{"_shards":{"total":5,"successful":5,"failed":0},"terms":[{"name":"search"},{"name":"prante"},{"name":"hello"},{"name":"elastic"},{"name":"world"},{"name":"jörg"}]}
 
 Get term list of index `test` of field `message`::
 
-	curl -XGET 'http://localhost:9200/test/_termlist/message'
-	{"ok":true,"_shards":{"total":5,"successful":5,"failed":0},"terms":["elastic","search"]}
+	curl -XGET 'http://localhost:9200/test/_termlist?field=message'
+	{"_shards":{"total":5,"successful":5,"failed":0},"terms":[{"name":"elastic"},{"name":"search"}]}
 
-Optionally, the term list can be narrowed down to a field name. The field name is the Lucene field name as found in the Lucene index.
+Get term list of index `test` with total frequencies::
 
-Only terms of field names not starting with underscore are listed. Terms of internal fields like `_uid`, `_all`, or `_type` are always skipped.
+	curl -XGET 'http://localhost:9200/test/_termlist?totalfreqs'
+	{"_shards":{"total":5,"successful":5,"failed":0},"terms":[{"name":"hello","totalfreq":2},{"name":"world","totalfreq":1},{"name":"search","totalfreq":1},{"name":"prante","totalfreq":1},{"name":"jörg","totalfreq":1},{"name":"elastic","totalfreq":1}]}
 
-If you want a sorted term list, you have to sort the obtained list at client side.
+
+Get term list of index `test` with total frequencies but only the first three terms of the list::
+
+	curl -XGET 'http://localhost:9200/test/_termlist?totalfreqs&size=3'
+	{"_shards":{"total":5,"successful":5,"failed":0},"terms":[{"name":"hello","totalfreq":2},{"name":"world","totalfreq":1},{"name":"search","totalfreq":1}]}
+
 
 Caution
 =======
