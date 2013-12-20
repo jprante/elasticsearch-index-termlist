@@ -1,4 +1,3 @@
 org.xbib.elasticsearch.action.termlist
-org.xbib.elasticsearch.module.termlist
 org.xbib.elasticsearch.plugin.termlist
 org.xbib.elasticsearch.rest.action.termlist
