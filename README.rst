@@ -1,8 +1,9 @@
 Elasticsearch Index Termlist Plugin
 ===================================
 
-This plugin extends Elasticsearch with a term list capability.
-Term lists can be generated from indexes, or even of all of the indexes in the cluster.
+This plugin extends Elasticsearch with a term list capability, not only revealing all occuring terms but
+also stating each terms frequency. Term lists can be generated from indexes, or even of all of the
+indexes in the cluster.
 
 Installation
 ------------
