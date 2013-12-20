@@ -8,43 +8,48 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 /**
  * A response for termlist action.
  */
 public class TermlistResponse extends BroadcastOperationResponse {
 
-    private Set<String> termlist;
+    private Map<String,TermInfo> map;
 
     TermlistResponse() {
     }
 
-    TermlistResponse(int totalShards, int successfulShards, int failedShards, List<ShardOperationFailedException> shardFailures, Set<String> termlist) {
+    TermlistResponse(int totalShards, int successfulShards, int failedShards,
+                     List<ShardOperationFailedException> shardFailures, Map<String,TermInfo> map) {
         super(totalShards, successfulShards, failedShards, shardFailures);
-        this.termlist = termlist;
+        this.map = map;
     }
 
-    public Set<String> getTermlist() {
-        return termlist;
+    public Map<String,TermInfo> getTermlist() {
+        return map;
     }
 
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
         int n = in.readInt();
-        termlist = new CompactHashSet<String>();
+        map = new CompactHashMap<String,TermInfo>();
         for (int i = 0; i < n; i++) {
-            termlist.add(in.readString());
+            String text = in.readString();
+            TermInfo t = new TermInfo();
+            t.readFrom(in);
+            map.put(text,t);
         }
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
-        out.writeInt(termlist.size());
-        for (String t : termlist) {
-            out.writeString(t);
+        out.writeInt(map.size());
+        for (Map.Entry<String,TermInfo> t : map.entrySet()) {
+            out.writeString(t.getKey());
+            t.getValue().writeTo(out);
         }
     }
 }

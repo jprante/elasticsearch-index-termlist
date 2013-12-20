@@ -15,6 +15,16 @@ public class TermlistRequestBuilder extends BroadcastOperationRequestBuilder<Ter
         super(client, new TermlistRequest());
     }
 
+    public TermlistRequestBuilder withDocFreq() {
+        request.setWithDocFreq(true);
+        return this;
+    }
+
+    public TermlistRequestBuilder withTotalFreq() {
+        request.setWithTotalFreq(true);
+        return this;
+    }
+
     @Override
     protected void doExecute(ActionListener<TermlistResponse> listener) {
         ((Client) client).execute(TermlistAction.INSTANCE, request, listener);

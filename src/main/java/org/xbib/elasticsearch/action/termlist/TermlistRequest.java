@@ -12,6 +12,12 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
 
     private String field;
 
+    private Integer size;
+
+    private boolean withDocFreq;
+
+    private boolean withTotalFreq;
+
     TermlistRequest() {
     }
 
@@ -26,6 +32,29 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
 
     public String getField() {
         return field;
+    }
+
+    public void setSize(Integer size) {
+        this.size = size;
+    }
+
+    public Integer getSize() {
+        return size;
+    }
+
+    public void setWithDocFreq(boolean withDocFreq) {
+        this.withDocFreq = withDocFreq;
+    }
+
+    public boolean getWithDocFreq() {
+        return withDocFreq;
+    }
+    public void setWithTotalFreq(boolean withTotalFreq) {
+        this.withTotalFreq = withTotalFreq;
+    }
+
+    public boolean getWithTotalFreq() {
+        return withTotalFreq;
     }
 
     @Override

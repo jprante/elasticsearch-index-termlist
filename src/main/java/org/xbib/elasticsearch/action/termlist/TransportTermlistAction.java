@@ -2,6 +2,7 @@
 package org.xbib.elasticsearch.action.termlist;
 
 import org.apache.lucene.index.Fields;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.MultiFields;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
@@ -27,12 +28,14 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
 import java.io.IOException;
-import java.util.Iterator;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
-import static org.elasticsearch.common.collect.Lists.newArrayList;
+import static org.elasticsearch.common.collect.Lists.newLinkedList;
 
 /**
  * Termlist index/indices action.
@@ -41,7 +44,6 @@ public class TransportTermlistAction
         extends TransportBroadcastOperationAction<TermlistRequest, TermlistResponse, ShardTermlistRequest, ShardTermlistResponse> {
 
     private final IndicesService indicesService;
-    private final Object termlistMutex = new Object();
 
     @Inject
     public TransportTermlistAction(Settings settings, ThreadPool threadPool, ClusterService clusterService,
@@ -52,7 +54,7 @@ public class TransportTermlistAction
 
     @Override
     protected String executor() {
-        return ThreadPool.Names.MERGE;
+        return ThreadPool.Names.GENERIC;
     }
 
     @Override
@@ -70,26 +72,28 @@ public class TransportTermlistAction
         int successfulShards = 0;
         int failedShards = 0;
         List<ShardOperationFailedException> shardFailures = null;
-        Set<String> termlist = new CompactHashSet<String>();
+        Map<String, TermInfo> map = new CompactHashMap<String,TermInfo>();
         for (int i = 0; i < shardsResponses.length(); i++) {
             Object shardResponse = shardsResponses.get(i);
-            if (shardResponse == null) {
-                // a non active shard, ignore...
-            } else if (shardResponse instanceof BroadcastShardOperationFailedException) {
+            if (shardResponse instanceof BroadcastShardOperationFailedException) {
                 failedShards++;
                 if (shardFailures == null) {
-                    shardFailures = newArrayList();
+                    shardFailures = newLinkedList();
                 }
                 shardFailures.add(new DefaultShardOperationFailedException((BroadcastShardOperationFailedException) shardResponse));
             } else {
                 successfulShards++;
                 if (shardResponse instanceof ShardTermlistResponse) {
                     ShardTermlistResponse resp = (ShardTermlistResponse) shardResponse;
-                    termlist.addAll(resp.getTermList());
+                    merge(map, resp.getTermList());
                 }
             }
         }
-        return new TermlistResponse(shardsResponses.length(), successfulShards, failedShards, shardFailures, termlist);
+        map = request.getWithTotalFreq() ? sortTotalFreq(map, request.getSize()) :
+                request.getWithDocFreq() ? sortDocFreq(map, request.getSize()) :
+                        truncate(map, request.getSize());
+
+        return new TermlistResponse(shardsResponses.length(), successfulShards, failedShards, shardFailures, map);
     }
 
     @Override
@@ -105,41 +109,6 @@ public class TransportTermlistAction
     @Override
     protected ShardTermlistResponse newShardResponse() {
         return new ShardTermlistResponse();
-    }
-
-    @Override
-    protected ShardTermlistResponse shardOperation(ShardTermlistRequest request) throws ElasticSearchException {
-        synchronized (termlistMutex) {
-            InternalIndexShard indexShard = (InternalIndexShard) indicesService.indexServiceSafe(request.index()).shardSafe(request.shardId());
-            indexShard.store().directory();
-            Engine.Searcher searcher = indexShard.acquireSearcher();
-            try {
-                Set<String> set = new CompactHashSet<String>();
-                Fields fields = MultiFields.getFields(searcher.reader());
-                if (fields != null) {
-                    for (Iterator<String> it = fields.iterator(); it.hasNext(); ) {
-                        String field = it.next();
-                        if (field.charAt(0) == '_') {
-                            continue;
-                        }
-                        if (request.getField() == null || field.equals(request.getField())) {
-                            Terms terms = fields.terms(field);
-                            if (terms != null) {
-                                TermsEnum termsEnum = terms.iterator(null);
-                                BytesRef text;
-                                while ((text = termsEnum.next()) != null) {
-                                    set.add(text.utf8ToString());
-                                    System.out.println("field=" + field + "; text=" + text.utf8ToString());
-                                }
-                            }
-                        }
-                    }
-                }
-                return new ShardTermlistResponse(request.index(), request.shardId(), set);
-            } catch (IOException ex) {
-                throw new ElasticSearchException(ex.getMessage(), ex);
-            }
-        }
     }
 
     /**
@@ -159,4 +128,149 @@ public class TransportTermlistAction
     protected ClusterBlockException checkRequestBlock(ClusterState state, TermlistRequest request, String[] concreteIndices) {
         return state.blocks().indicesBlockedException(ClusterBlockLevel.METADATA, concreteIndices);
     }
+
+    @Override
+    protected ShardTermlistResponse shardOperation(ShardTermlistRequest request) throws ElasticSearchException {
+        InternalIndexShard indexShard = (InternalIndexShard) indicesService.indexServiceSafe(request.index()).shardSafe(request.shardId());
+        Engine.Searcher searcher = indexShard.engine().acquireSearcher("termlist");
+        try {
+            Map<String,TermInfo> map = new CompactHashMap<String,TermInfo>();
+            IndexReader reader = searcher.reader();
+            Fields fields = MultiFields.getFields(reader);
+            if (fields != null) {
+                for (String field : fields) {
+                    // skip internal fields
+                    if (field.charAt(0) == '_') {
+                        continue;
+                    }
+                    if (request.getField() == null || field.equals(request.getField())) {
+                        Terms terms = fields.terms(field);
+                        if (terms != null) {
+                            TermsEnum termsEnum = terms.iterator(null);
+                            BytesRef text;
+                            while ((text = termsEnum.next()) != null) {
+                                // skip invalid terms
+                                if (termsEnum.docFreq() < 1) {
+                                    continue;
+                                }
+                                if (termsEnum.totalTermFreq() < 1) {
+                                    continue;
+                                }
+                                TermInfo t = new TermInfo();
+                                if (request.getWithDocFreq()) {
+                                    t.docfreq(termsEnum.docFreq());
+                                }
+                                if (request.getWithTotalFreq()) {
+                                    t.totalFreq(termsEnum.totalTermFreq());
+                                }
+                                map.put(text.utf8ToString(), t);
+                            }
+                        }
+                    }
+                }
+            }
+            return new ShardTermlistResponse(request.index(), request.shardId(), map);
+        } catch (IOException ex) {
+            throw new ElasticSearchException(ex.getMessage(), ex);
+        } finally {
+            searcher.release();
+        }
+    }
+
+    private void merge(Map<String,TermInfo> map, Map<String,TermInfo> other) {
+        for (Map.Entry<String,TermInfo> t : other.entrySet()) {
+            if (map.containsKey(t.getKey())) {
+                TermInfo info = map.get(t.getKey());
+                Integer docFreq = info.getDocFreq();
+                if (docFreq != null) {
+                    if (t.getValue().getDocFreq() != null) {
+                        info.docfreq(docFreq + t.getValue().getDocFreq());
+                    }
+                } else {
+                    if (t.getValue().getDocFreq() != null) {
+                        info.docfreq(t.getValue().getDocFreq());
+                    }
+                }
+                Long totalFreq = info.getTotalFreq();
+                if (totalFreq != null) {
+                    if (t.getValue().getTotalFreq() != null) {
+                        info.totalFreq(totalFreq + t.getValue().getTotalFreq());
+                    }
+                } else {
+                    if (t.getValue().getTotalFreq() != null) {
+                        info.totalFreq(t.getValue().getTotalFreq());
+                    }
+                }
+            } else {
+                map.put(t.getKey(), t.getValue());
+            }
+        }
+    }
+
+    private SortedMap<String,TermInfo> sortTotalFreq(final Map<String,TermInfo> map, Integer size) {
+        Comparator<String> comp = new Comparator<String>() {
+            @Override
+            public int compare(String t1, String t2) {
+                Long l1 = map.get(t1).getTotalFreq();
+                String s1 = Long.toString(l1).length() + Long.toString(l1) + t1;
+                Long l2 = map.get(t2).getTotalFreq();
+                String s2 = Long.toString(l2).length() + Long.toString(l2) + t2;
+                return -s1.compareTo(s2);
+            }
+        };
+        TreeMap<String,TermInfo> m = new TreeMap<String,TermInfo>(comp);
+        m.putAll(map);
+        if (size != null && size > 0) {
+            TreeMap<String,TermInfo> n = new TreeMap<String,TermInfo>(comp);
+            Map.Entry<String,TermInfo> me = m.pollFirstEntry();
+            while (me != null && size-- > 0) {
+                n.put(me.getKey(), me.getValue());
+                me = m.pollFirstEntry();
+            }
+            return n;
+        }
+        return m;
+    }
+
+    private SortedMap<String,TermInfo> sortDocFreq(final Map<String,TermInfo> map, Integer size) {
+        Comparator<String> comp = new Comparator<String>() {
+            @Override
+            public int compare(String t1, String t2) {
+                Integer i1 = map.get(t1).getDocFreq();
+                String s1 = Integer.toString(i1).length() + Integer.toString(i1) + t1;
+                Integer i2 = map.get(t2).getDocFreq();
+                String s2 = Integer.toString(i2).length() + Integer.toString(i2) + t2;
+                return -s1.compareTo(s2);
+            }
+        };
+        TreeMap<String,TermInfo> m = new TreeMap<String,TermInfo>(comp);
+        m.putAll(map);
+        if (size != null && size > 0) {
+            TreeMap<String,TermInfo> n = new TreeMap<String,TermInfo>(comp);
+            Map.Entry<String,TermInfo> me = m.pollFirstEntry();
+            while (me != null && size-- > 0) {
+                n.put(me.getKey(), me.getValue());
+                me = m.pollFirstEntry();
+            }
+            return n;
+        }
+        return m;
+    }
+
+    private Map<String,TermInfo> truncate(Map<String,TermInfo> source, Integer max) {
+        if (max == null || max < 1) {
+            return source;
+        }
+        int count = 0;
+        Map<String,TermInfo> target = new CompactHashMap<String,TermInfo>();
+        for (Map.Entry<String,TermInfo> entry : source.entrySet()) {
+            if (count >= max) {
+                break;
+            }
+            target.put(entry.getKey(), entry.getValue());
+            count++;
+        }
+        return target;
+    }
+
 }
