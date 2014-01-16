@@ -8,7 +8,7 @@ import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.util.BytesRef;
 
-import org.elasticsearch.ElasticSearchException;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ShardOperationFailedException;
 import org.elasticsearch.action.support.DefaultShardOperationFailedException;
 import org.elasticsearch.action.support.broadcast.BroadcastShardOperationFailedException;
@@ -130,7 +130,7 @@ public class TransportTermlistAction
     }
 
     @Override
-    protected ShardTermlistResponse shardOperation(ShardTermlistRequest request) throws ElasticSearchException {
+    protected ShardTermlistResponse shardOperation(ShardTermlistRequest request) throws ElasticsearchException {
         InternalIndexShard indexShard = (InternalIndexShard) indicesService.indexServiceSafe(request.index()).shardSafe(request.shardId());
         Engine.Searcher searcher = indexShard.engine().acquireSearcher("termlist");
         try {
@@ -171,7 +171,7 @@ public class TransportTermlistAction
             }
             return new ShardTermlistResponse(request.index(), request.shardId(), map);
         } catch (IOException ex) {
-            throw new ElasticSearchException(ex.getMessage(), ex);
+            throw new ElasticsearchException(ex.getMessage(), ex);
         } finally {
             searcher.release();
         }
