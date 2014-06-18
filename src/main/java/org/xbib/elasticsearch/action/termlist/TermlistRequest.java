@@ -1,12 +1,11 @@
 
 package org.xbib.elasticsearch.action.termlist;
 
+import java.io.IOException;
+
 import org.elasticsearch.action.support.broadcast.BroadcastOperationRequest;
-import org.elasticsearch.action.support.broadcast.BroadcastOperationThreading;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-
-import java.io.IOException;
 
 public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> {
 
@@ -23,7 +22,6 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
 
     public TermlistRequest(String... indices) {
         super(indices);
-        operationThreading(BroadcastOperationThreading.THREAD_PER_SHARD);
     }
 
     public void setField(String field) {
