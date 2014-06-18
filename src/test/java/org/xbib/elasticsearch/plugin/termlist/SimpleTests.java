@@ -45,7 +45,7 @@ public class SimpleTests extends Assert {
     @Test
     public void assertPluginLoaded() {
         NodesInfoResponse nodesInfoResponse = client.admin().cluster().prepareNodesInfo()
-                .clear().setPlugin(true).get();
+                .clear().setPlugins(true).get();
         logger.info("{}", nodesInfoResponse);
         assertEquals(nodesInfoResponse.getNodes().length, 1);
         assertNotNull(nodesInfoResponse.getNodes()[0].getPlugins().getInfos());

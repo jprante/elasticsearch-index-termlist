@@ -18,6 +18,7 @@ ES version     Plugin       Release date       Command
 0.90.5         1.3.0        Oct 16, 2013       ./bin/plugin --install termlist --url http://bit.ly/1bzHfIl
 0.90.7         1.4.0        Dec 20, 2013       ./bin/plugin --install termlist --url http://bit.ly/1c70ICf
 1.0.0.RC1      1.0.0.RC1.1  Jan 16, 2014       ./bin/plugin --install termlist --url http://bit.ly/1dSIzoW
+1.2.1          1.2.1
 =============  ===========  =================  ===========================================================
 
 Do not forget to restart the node after installing.
