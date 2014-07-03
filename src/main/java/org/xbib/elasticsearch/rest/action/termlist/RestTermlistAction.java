@@ -1,30 +1,26 @@
-
 package org.xbib.elasticsearch.rest.action.termlist;
 
-import java.io.IOException;
-import java.util.Map;
-
-import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.rest.BaseRestHandler;
+import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
-import org.elasticsearch.rest.XContentRestResponse;
-import org.elasticsearch.rest.XContentThrowableRestResponse;
-import org.elasticsearch.rest.action.support.RestXContentBuilder;
-
+import org.elasticsearch.rest.RestResponse;
+import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.rest.action.support.RestBuilderListener;
 import org.xbib.elasticsearch.action.termlist.TermInfo;
 import org.xbib.elasticsearch.action.termlist.TermlistAction;
 import org.xbib.elasticsearch.action.termlist.TermlistRequest;
 import org.xbib.elasticsearch.action.termlist.TermlistResponse;
 
+import java.util.Map;
+
 import static org.elasticsearch.rest.RestRequest.Method.GET;
-import static org.elasticsearch.rest.RestStatus.OK;
 import static org.elasticsearch.rest.action.support.RestActions.buildBroadcastShardsHeader;
 
 public class RestTermlistAction extends BaseRestHandler {
@@ -44,37 +40,25 @@ public class RestTermlistAction extends BaseRestHandler {
         termlistRequest.setSize(request.paramAsInt("size", 0));
         termlistRequest.setWithDocFreq(request.paramAsBoolean("docfreqs", false));
         termlistRequest.setWithTotalFreq(request.paramAsBoolean("totalfreqs", false));
-        client.execute(TermlistAction.INSTANCE, termlistRequest, new ActionListener<TermlistResponse>() {
-
-            public void onResponse(TermlistResponse response) {
-                try {
-                    XContentBuilder builder = RestXContentBuilder.restContentBuilder(request);
-                    builder.startObject();
-                    buildBroadcastShardsHeader(builder, response);
-                    builder.startArray("terms");
-                    for (Map.Entry<String,TermInfo> t : response.getTermlist().entrySet()) {
-                        builder.startObject().field("name", t.getKey());
-                        if (t.getValue().getDocFreq() != null) {
-                            builder.field("docfreq", t.getValue().getDocFreq());
-                        }
-                        if (t.getValue().getTotalFreq() != null) {
-                            builder.field("totalfreq", t.getValue().getTotalFreq());
-                        }
-                        builder.endObject();
+        client.execute(TermlistAction.INSTANCE, termlistRequest, new RestBuilderListener<TermlistResponse>(channel) {
+            @Override
+            public RestResponse buildResponse(TermlistResponse response, XContentBuilder builder) throws Exception {
+                builder.startObject();
+                buildBroadcastShardsHeader(builder, response);
+                builder.startArray("terms");
+                for (Map.Entry<String, TermInfo> t : response.getTermlist().entrySet()) {
+                    builder.startObject().field("name", t.getKey());
+                    if (t.getValue().getDocFreq() != null) {
+                        builder.field("docfreq", t.getValue().getDocFreq());
                     }
-                    builder.endArray().endObject();
-                    channel.sendResponse(new XContentRestResponse(request, OK, builder));
-                } catch (Exception e) {
-                    onFailure(e);
+                    if (t.getValue().getTotalFreq() != null) {
+                        builder.field("totalfreq", t.getValue().getTotalFreq());
+                    }
+                    builder.endObject();
                 }
-            }
-
-            public void onFailure(Throwable e) {
-                try {
-                    channel.sendResponse(new XContentThrowableRestResponse(request, e));
-                } catch (IOException e1) {
-                    logger.error("Failed to send failure response", e1);
-                }
+                builder.endArray();
+                builder.endObject();
+                return new BytesRestResponse(RestStatus.OK, builder);
             }
         });
     }

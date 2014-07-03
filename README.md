@@ -1,39 +1,37 @@
-Elasticsearch Index Termlist Plugin
-===================================
+# Elasticsearch Index Termlist Plugin
 
 This plugin extends Elasticsearch with a term list capability, not only revealing all occuring terms but
 also stating each terms frequency. Term lists can be generated from indexes, or even of all of the
 indexes in the cluster.
 
-Installation
-------------
+## Versions
 
-Prerequisites::
+| Elasticsearch  | Plugin       | Release date |
+| -------------- | ------------ | ------------ |
+| 1.2.1          | 1.2.1.0      | Jul  3, 2014 |
 
-  Elasticsearch 0.90+
+## Installation
 
-=============  ===========  =================  ===========================================================
-ES version     Plugin       Release date       Command
--------------  -----------  -----------------  -----------------------------------------------------------
-0.90.5         1.3.0        Oct 16, 2013       ./bin/plugin --install termlist --url http://bit.ly/1bzHfIl
-0.90.7         1.4.0        Dec 20, 2013       ./bin/plugin --install termlist --url http://bit.ly/1c70ICf
-1.0.0.RC1      1.0.0.RC1.1  Jan 16, 2014       ./bin/plugin --install termlist --url http://bit.ly/1dSIzoW
-=============  ===========  =================  ===========================================================
+    ./bin/plugin -install index-termlist -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-index-termlist/1.2.1.0/elasticsearch-index-termlist-1.2.1.0-plugin.zip
 
 Do not forget to restart the node after installing.
 
-Project docs
-------------
+## Checksum
 
-The Maven project site is available at `Github <http://jprante.github.io/elasticsearch-index-termlist>`_
+| File                                              | SHA1                                     |
+| ------------------------------------------------- | -----------------------------------------|
+| elasticsearch-index-termlist-1.2.1.0-plugin.zip   |  |
 
-Binaries
---------
 
-Binaries are available at `Bintray <https://bintray.com/pkg/show/general/jprante/elasticsearch-plugins/elasticsearch-index-termlist>`_
+## Project docs
 
-Introduction
-------------
+The Maven project site is available at [Github](http://jprante.github.io/elasticsearch-index-termlis)
+
+## Issues
+
+All feedback is welcome! If you find issues, please post them at [Github](https://github.com/jprante/elasticsearch-index-termlis/issues)
+
+# Introduction
 
 Getting the list of all terms indexed is useful for variuos purposes, for example
 
@@ -49,8 +47,7 @@ name as found in the Lucene index.
 Only terms of field names not starting with underscore are listed. Terms of internal fields
 like `_uid`, `_all`, or `_type` are always skipped.
 
-Example
-=======
+# Example
 
 Consider the following example index::
 
@@ -81,8 +78,7 @@ Get term list of index `test` with total frequencies but only the first three te
 	{"_shards":{"total":5,"successful":5,"failed":0},"terms":[{"name":"hello","totalfreq":2},{"name":"world","totalfreq":1},{"name":"search","totalfreq":1}]}
 
 
-Caution
-=======
+# Caution
 
 The term list is built internally into an unsorted, compact set of strings which i
 s not streamed to the client. You should be aware that if you have lots of unique terms
@@ -90,9 +86,7 @@ in the index, this procedure consumes a lot of heap memory and may result in
 out of memory situations that can render your Elasticsearch cluster unusable
 until it is restarted.
 
-
-License
-=======
+# License
 
 Elasticsearch Term List Plugin
 

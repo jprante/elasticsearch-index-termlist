@@ -1,4 +1,3 @@
-
 package org.xbib.elasticsearch.action.termlist;
 
 import org.elasticsearch.action.support.broadcast.BroadcastShardOperationRequest;

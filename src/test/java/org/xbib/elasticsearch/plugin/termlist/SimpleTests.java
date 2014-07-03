@@ -44,13 +44,12 @@ public class SimpleTests extends Assert {
 
     @Test
     public void assertPluginLoaded() {
-        NodesInfoResponse nodesInfoResponse = client.admin().cluster().prepareNodesInfo()
-                .clear().setPlugin(true).get();
+        NodesInfoResponse nodesInfoResponse = client.admin().cluster().prepareNodesInfo().setPlugins(true).get();
         logger.info("{}", nodesInfoResponse);
         assertEquals(nodesInfoResponse.getNodes().length, 1);
         assertNotNull(nodesInfoResponse.getNodes()[0].getPlugins().getInfos());
         assertEquals(nodesInfoResponse.getNodes()[0].getPlugins().getInfos().size(), 1);
-        assertEquals(nodesInfoResponse.getNodes()[0].getPlugins().getInfos().get(0).getName(), "index-termlist");
         assertEquals(nodesInfoResponse.getNodes()[0].getPlugins().getInfos().get(0).isSite(), false);
+        assertTrue(nodesInfoResponse.getNodes()[0].getPlugins().getInfos().get(0).getName().startsWith("index-termlist"));
     }
 }

@@ -1,4 +1,3 @@
-
 package org.xbib.elasticsearch.action.termlist;
 
 import org.apache.lucene.index.Fields;
@@ -7,7 +6,6 @@ import org.apache.lucene.index.MultiFields;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.util.BytesRef;
-
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ShardOperationFailedException;
 import org.elasticsearch.action.support.DefaultShardOperationFailedException;
@@ -26,6 +24,7 @@ import org.elasticsearch.index.shard.service.InternalIndexShard;
 import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
+import org.xbib.elasticsearch.common.termlist.CompactHashMap;
 
 import java.io.IOException;
 import java.util.Comparator;
@@ -72,7 +71,7 @@ public class TransportTermlistAction
         int successfulShards = 0;
         int failedShards = 0;
         List<ShardOperationFailedException> shardFailures = null;
-        Map<String, TermInfo> map = new CompactHashMap<String,TermInfo>();
+        Map<String, TermInfo> map = new CompactHashMap<String, TermInfo>();
         for (int i = 0; i < shardsResponses.length(); i++) {
             Object shardResponse = shardsResponses.get(i);
             if (shardResponse instanceof BroadcastShardOperationFailedException) {
@@ -134,7 +133,7 @@ public class TransportTermlistAction
         InternalIndexShard indexShard = (InternalIndexShard) indicesService.indexServiceSafe(request.index()).shardSafe(request.shardId());
         Engine.Searcher searcher = indexShard.engine().acquireSearcher("termlist");
         try {
-            Map<String,TermInfo> map = new CompactHashMap<String,TermInfo>();
+            Map<String, TermInfo> map = new CompactHashMap<String, TermInfo>();
             IndexReader reader = searcher.reader();
             Fields fields = MultiFields.getFields(reader);
             if (fields != null) {
@@ -173,12 +172,12 @@ public class TransportTermlistAction
         } catch (IOException ex) {
             throw new ElasticsearchException(ex.getMessage(), ex);
         } finally {
-            searcher.release();
+            searcher.close();
         }
     }
 
-    private void merge(Map<String,TermInfo> map, Map<String,TermInfo> other) {
-        for (Map.Entry<String,TermInfo> t : other.entrySet()) {
+    private void merge(Map<String, TermInfo> map, Map<String, TermInfo> other) {
+        for (Map.Entry<String, TermInfo> t : other.entrySet()) {
             if (map.containsKey(t.getKey())) {
                 TermInfo info = map.get(t.getKey());
                 Integer docFreq = info.getDocFreq();
@@ -207,7 +206,7 @@ public class TransportTermlistAction
         }
     }
 
-    private SortedMap<String,TermInfo> sortTotalFreq(final Map<String,TermInfo> map, Integer size) {
+    private SortedMap<String, TermInfo> sortTotalFreq(final Map<String, TermInfo> map, Integer size) {
         Comparator<String> comp = new Comparator<String>() {
             @Override
             public int compare(String t1, String t2) {
@@ -218,11 +217,11 @@ public class TransportTermlistAction
                 return -s1.compareTo(s2);
             }
         };
-        TreeMap<String,TermInfo> m = new TreeMap<String,TermInfo>(comp);
+        TreeMap<String, TermInfo> m = new TreeMap<String, TermInfo>(comp);
         m.putAll(map);
         if (size != null && size > 0) {
-            TreeMap<String,TermInfo> n = new TreeMap<String,TermInfo>(comp);
-            Map.Entry<String,TermInfo> me = m.pollFirstEntry();
+            TreeMap<String, TermInfo> n = new TreeMap<String, TermInfo>(comp);
+            Map.Entry<String, TermInfo> me = m.pollFirstEntry();
             while (me != null && size-- > 0) {
                 n.put(me.getKey(), me.getValue());
                 me = m.pollFirstEntry();
@@ -232,7 +231,7 @@ public class TransportTermlistAction
         return m;
     }
 
-    private SortedMap<String,TermInfo> sortDocFreq(final Map<String,TermInfo> map, Integer size) {
+    private SortedMap<String, TermInfo> sortDocFreq(final Map<String, TermInfo> map, Integer size) {
         Comparator<String> comp = new Comparator<String>() {
             @Override
             public int compare(String t1, String t2) {
@@ -243,11 +242,11 @@ public class TransportTermlistAction
                 return -s1.compareTo(s2);
             }
         };
-        TreeMap<String,TermInfo> m = new TreeMap<String,TermInfo>(comp);
+        TreeMap<String, TermInfo> m = new TreeMap<String, TermInfo>(comp);
         m.putAll(map);
         if (size != null && size > 0) {
-            TreeMap<String,TermInfo> n = new TreeMap<String,TermInfo>(comp);
-            Map.Entry<String,TermInfo> me = m.pollFirstEntry();
+            TreeMap<String, TermInfo> n = new TreeMap<String, TermInfo>(comp);
+            Map.Entry<String, TermInfo> me = m.pollFirstEntry();
             while (me != null && size-- > 0) {
                 n.put(me.getKey(), me.getValue());
                 me = m.pollFirstEntry();
@@ -257,13 +256,13 @@ public class TransportTermlistAction
         return m;
     }
 
-    private Map<String,TermInfo> truncate(Map<String,TermInfo> source, Integer max) {
+    private Map<String, TermInfo> truncate(Map<String, TermInfo> source, Integer max) {
         if (max == null || max < 1) {
             return source;
         }
         int count = 0;
-        Map<String,TermInfo> target = new CompactHashMap<String,TermInfo>();
-        for (Map.Entry<String,TermInfo> entry : source.entrySet()) {
+        Map<String, TermInfo> target = new CompactHashMap<String, TermInfo>();
+        for (Map.Entry<String, TermInfo> entry : source.entrySet()) {
             if (count >= max) {
                 break;
             }
