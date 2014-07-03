@@ -20,8 +20,7 @@ Do not forget to restart the node after installing.
 
 | File                                              | SHA1                                     |
 | ------------------------------------------------- | -----------------------------------------|
-| elasticsearch-index-termlist-1.2.1.0-plugin.zip   |  |
-
+| elasticsearch-index-termlist-1.2.1.0-plugin.zip   | c51a8d626b32a4a6cd2ac4335b5578f0e5cccaa6 |
 
 ## Project docs
 
