@@ -32,7 +32,7 @@ All feedback is welcome! If you find issues, please post them at [Github](https:
 
 # Introduction
 
-Getting the list of all terms indexed is useful for variuos purposes, for example
+Getting the list of all terms indexed is useful for various purposes, for example
 
 - building dictionaries
 - controlling the overall effects of analyzers on the indexed terms
