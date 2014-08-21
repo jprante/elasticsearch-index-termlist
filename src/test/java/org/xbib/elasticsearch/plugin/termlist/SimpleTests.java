@@ -31,6 +31,7 @@ public class SimpleTests extends Assert {
                 .put("cluster.name", CLUSTER)
                 .put("discovery.zen.ping.multicast.enabled", false)
                 .put("node.local", true)
+                .put("index.store.type", "ram")
                 .put("gateway.type", "none")
                 .build();
         node = nodeBuilder().settings(finalSettings).build().start();
@@ -45,7 +46,6 @@ public class SimpleTests extends Assert {
     @Test
     public void assertPluginLoaded() {
         NodesInfoResponse nodesInfoResponse = client.admin().cluster().prepareNodesInfo().setPlugins(true).get();
-        logger.info("{}", nodesInfoResponse);
         assertEquals(nodesInfoResponse.getNodes().length, 1);
         assertNotNull(nodesInfoResponse.getNodes()[0].getPlugins().getInfos());
         assertEquals(nodesInfoResponse.getNodes()[0].getPlugins().getInfos().size(), 1);

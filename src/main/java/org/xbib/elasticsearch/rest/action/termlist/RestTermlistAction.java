@@ -33,18 +33,24 @@ public class RestTermlistAction extends BaseRestHandler {
         controller.registerHandler(GET, "/{index}/{field}/_termlist", this);
     }
 
-    public void handleRequest(final RestRequest request, final RestChannel channel) {
+    public void handleRequest(final RestRequest request, final RestChannel channel, final Client client) {
         TermlistRequest termlistRequest = new TermlistRequest(
                 Strings.splitStringByCommaToArray(request.param("index")));
         termlistRequest.setField(request.param("field"));
+        termlistRequest.setTerm(request.param("term"));
+        termlistRequest.setFrom(request.paramAsInt("from", 0));
         termlistRequest.setSize(request.paramAsInt("size", 0));
         termlistRequest.setWithDocFreq(request.paramAsBoolean("docfreqs", false));
         termlistRequest.setWithTotalFreq(request.paramAsBoolean("totalfreqs", false));
+        termlistRequest.sortByDocFreq(request.paramAsBoolean("sortbydocfreqs", false));
+        termlistRequest.sortByTotalFreq(request.paramAsBoolean("sortbytotalfreqs", false));
+        termlistRequest.sortByTerm(request.paramAsBoolean("sortbyterms", false));
         client.execute(TermlistAction.INSTANCE, termlistRequest, new RestBuilderListener<TermlistResponse>(channel) {
             @Override
             public RestResponse buildResponse(TermlistResponse response, XContentBuilder builder) throws Exception {
                 builder.startObject();
                 buildBroadcastShardsHeader(builder, response);
+                builder.field("total", response.getSize());
                 builder.startArray("terms");
                 for (Map.Entry<String, TermInfo> t : response.getTermlist().entrySet()) {
                     builder.startObject().field("name", t.getKey());

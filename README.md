@@ -1,18 +1,19 @@
 # Elasticsearch Index Termlist Plugin
 
-This plugin extends Elasticsearch with a term list capability, not only revealing all occuring terms but
-also stating each terms frequency. Term lists can be generated from indexes, or even of all of the
-indexes in the cluster.
+This plugin extends Elasticsearch with a term list capability. It presents a list of terms in a field of an index
+and can also list each terms frequency. Term lists can be generated from one index or even of all of the
+indexes.
 
 ## Versions
 
 | Elasticsearch  | Plugin       | Release date |
 | -------------- | ------------ | ------------ |
+| 1.3.2          | 1.3.0.0      | Aug 21, 2014 |
 | 1.2.1          | 1.2.1.0      | Jul  3, 2014 |
 
 ## Installation
 
-    ./bin/plugin -install index-termlist -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-index-termlist/1.2.1.0/elasticsearch-index-termlist-1.2.1.0-plugin.zip
+    ./bin/plugin -install index-termlist -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-index-termlist/1.3.0.0/elasticsearch-index-termlist-1.3.0.0-plugin.zip
 
 Do not forget to restart the node after installing.
 
@@ -20,15 +21,16 @@ Do not forget to restart the node after installing.
 
 | File                                              | SHA1                                     |
 | ------------------------------------------------- | -----------------------------------------|
+| elasticsearch-index-termlist-1.3.0.0-plugin.zip   | 07ea40e85584c9887337c14ec5cca098a31089b5 |
 | elasticsearch-index-termlist-1.2.1.0-plugin.zip   | c51a8d626b32a4a6cd2ac4335b5578f0e5cccaa6 |
 
 ## Project docs
 
-The Maven project site is available at [Github](http://jprante.github.io/elasticsearch-index-termlis)
+The Maven project site is available at [Github](http://jprante.github.io/elasticsearch-index-termlist)
 
 ## Issues
 
-All feedback is welcome! If you find issues, please post them at [Github](https://github.com/jprante/elasticsearch-index-termlis/issues)
+All feedback is welcome! If you find issues, please post them at [Github](https://github.com/jprante/elasticsearch-index-termlist/issues)
 
 # Introduction
 
@@ -48,34 +50,42 @@ like `_uid`, `_all`, or `_type` are always skipped.
 
 # Example
 
-Consider the following example index::
+Consider the following example index
 
+	curl -XDELETE 'http://localhost:9200/test/'
 	curl -XPUT 'http://localhost:9200/test/'
 	curl -XPUT 'http://localhost:9200/test/test/1' -d '{ "test": "Hello World" }'
 	curl -XPUT 'http://localhost:9200/test/test/2' -d '{ "test": "Hello Jörg Prante" }'
 	curl -XPUT 'http://localhost:9200/test/test/3' -d '{ "message": "elastic search" }'
 
-Get term list of index ``test``::
+Get term list of index ``test``
 
 	curl -XGET 'http://localhost:9200/test/_termlist'
-	{"_shards":{"total":5,"successful":5,"failed":0},"terms":[{"name":"search"},{"name":"prante"},{"name":"hello"},{"name":"elastic"},{"name":"world"},{"name":"jörg"}]}
+	{"_shards":{"total":5,"successful":5,"failed":0},"total":6,"terms":[{"name":"search"},{"name":"prante"},{"name":"hello"},{"name":"world"},{"name":"jörg"},{"name":"elastic"}]}
 
-Get term list of index `test` of field `message`::
+Get term list of index `test` of field `message`
 
 	curl -XGET 'http://localhost:9200/test/_termlist?field=message'
-	{"_shards":{"total":5,"successful":5,"failed":0},"terms":[{"name":"elastic"},{"name":"search"}]}
+	{"_shards":{"total":5,"successful":5,"failed":0},"total":2,"terms":[{"name":"elastic"},{"name":"search"}]}
 
-Get term list of index `test` with total frequencies::
+Get term list of index `test` with total frequencies
 
 	curl -XGET 'http://localhost:9200/test/_termlist?totalfreqs'
-	{"_shards":{"total":5,"successful":5,"failed":0},"terms":[{"name":"hello","totalfreq":2},{"name":"world","totalfreq":1},{"name":"search","totalfreq":1},{"name":"prante","totalfreq":1},{"name":"jörg","totalfreq":1},{"name":"elastic","totalfreq":1}]}
+	{"_shards":{"total":5,"successful":5,"failed":0},"total":6,"terms":[{"name":"search","totalfreq":1},{"name":"prante","totalfreq":1},{"name":"hello","totalfreq":2},{"name":"world","totalfreq":1},{"name":"jörg","totalfreq":1},{"name":"elastic","totalfreq":1}]}
 
-
-Get term list of index `test` with total frequencies but only the first three terms of the list::
+Get term list of index `test` with total frequencies but only the first three terms of the list
 
 	curl -XGET 'http://localhost:9200/test/_termlist?totalfreqs&size=3'
-	{"_shards":{"total":5,"successful":5,"failed":0},"terms":[{"name":"hello","totalfreq":2},{"name":"world","totalfreq":1},{"name":"search","totalfreq":1}]}
+	{"_shards":{"total":5,"successful":5,"failed":0},"total":6,"terms":[{"name":"prante","totalfreq":1},{"name":"hello","totalfreq":2},{"name":"world","totalfreq":1}]}
 
+Get term list of terms starting with `hello` in index `test` field `test`, with total frequencies. This can be useful to estimate hits.
+
+	curl -XGET 'http://localhost:9200/test/_termlist?field=test&term=hello&totalfreqs'
+	{"_shards":{"total":5,"successful":5,"failed":0},"total":1,"terms":[{"name":"hello","totalfreq":2}]}
+
+A complete sorted list of terms in your index beginning with `a`, pageable, complete with frequencies
+
+    curl -XGET 'http://localhost:9200/books/_termlist?term=a&totalfreqs&sortbyterms&pretty&from=0&size=100' 
 
 # Caution
 

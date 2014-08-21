@@ -2,6 +2,7 @@ package org.xbib.elasticsearch.action.termlist;
 
 import java.io.IOException;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -47,18 +48,13 @@ public class TransportTermlistAction
     @Inject
     public TransportTermlistAction(Settings settings, ThreadPool threadPool, ClusterService clusterService,
                                    TransportService transportService, IndicesService indicesService) {
-        super(settings, threadPool, clusterService, transportService);
+        super(settings, TermlistAction.NAME, threadPool, clusterService, transportService);
         this.indicesService = indicesService;
     }
 
     @Override
     protected String executor() {
         return ThreadPool.Names.GENERIC;
-    }
-
-    @Override
-    protected String transportAction() {
-        return TermlistAction.NAME;
     }
 
     @Override
@@ -88,11 +84,13 @@ public class TransportTermlistAction
                 }
             }
         }
-        map = request.getWithTotalFreq() ? sortTotalFreq(map, request.getSize()) :
-                request.getWithDocFreq() ? sortDocFreq(map, request.getSize()) :
-                        truncate(map, request.getSize());
+        int size = map.size();
+        map = request.sortByTotalFreq() ? sortTotalFreq(map, request.getFrom(), request.getSize()) :
+              request.sortByDocFreq() ? sortDocFreq(map, request.getFrom(), request.getSize()) :
+              request.sortByTerm() ? sortTerm(map, request.getFrom(), request.getSize()) :
+              truncate(map, request.getFrom(), request.getSize());
 
-        return new TermlistResponse(shardsResponses.length(), successfulShards, failedShards, shardFailures, map);
+        return new TermlistResponse(shardsResponses.length(), successfulShards, failedShards, shardFailures, size, map);
     }
 
     @Override
@@ -101,7 +99,7 @@ public class TransportTermlistAction
     }
 
     @Override
-    protected ShardTermlistRequest newShardRequest(ShardRouting shard, TermlistRequest request) {
+    protected ShardTermlistRequest newShardRequest(int numShards, ShardRouting shard, TermlistRequest request) {
         return new ShardTermlistRequest(shard.index(), shard.id(), request);
     }
 
@@ -155,14 +153,17 @@ public class TransportTermlistAction
                                 if (termsEnum.totalTermFreq() < 1) {
                                     continue;
                                 }
-                                TermInfo t = new TermInfo();
+                                String term = text.utf8ToString();
+                                TermInfo termInfo = new TermInfo();
                                 if (request.getWithDocFreq()) {
-                                    t.docfreq(termsEnum.docFreq());
+                                    termInfo.docfreq(termsEnum.docFreq());
                                 }
                                 if (request.getWithTotalFreq()) {
-                                    t.totalFreq(termsEnum.totalTermFreq());
+                                    termInfo.totalFreq(termsEnum.totalTermFreq());
                                 }
-                                map.put(text.utf8ToString(), t);
+                                if (request.getTerm() == null || term.startsWith(request.getTerm())) {
+                                    map.put(term, termInfo);
+                                }
                             }
                         }
                     }
@@ -206,68 +207,97 @@ public class TransportTermlistAction
         }
     }
 
-    private SortedMap<String, TermInfo> sortTotalFreq(final Map<String, TermInfo> map, Integer size) {
+    private SortedMap<String, TermInfo> sortTerm(final Map<String, TermInfo> map, Integer from, Integer size) {
+        /**
+         * Should be collator based
+         */
+        Comparator<String> comp = new Comparator<String>() {
+            @Override
+            public int compare(String t1, String t2) {
+                return t1.compareTo(t2);
+            }
+        };
+        TreeMap<String, TermInfo> m = new TreeMap<String, TermInfo>(comp);
+        m.putAll(map);
+        if (size != null && size > 0) {
+            TreeMap<String, TermInfo> treeMap = new TreeMap<String, TermInfo>(comp);
+            for (int i = 0; i < m.size(); i++) {
+                Map.Entry<String, TermInfo> me = m.pollFirstEntry();
+                if (i > from && i<= from + size) {
+                    treeMap.put(me.getKey(), me.getValue());
+                }
+            }
+            return treeMap;
+        }
+        return m;
+    }
+    private SortedMap<String, TermInfo> sortTotalFreq(final Map<String, TermInfo> map, Integer from, Integer size) {
         Comparator<String> comp = new Comparator<String>() {
             @Override
             public int compare(String t1, String t2) {
                 Long l1 = map.get(t1).getTotalFreq();
-                String s1 = Long.toString(l1).length() + Long.toString(l1) + t1;
+                String sl1 = Long.toString(l1);
+                String s1 = sl1.length() + sl1 + t1;
                 Long l2 = map.get(t2).getTotalFreq();
-                String s2 = Long.toString(l2).length() + Long.toString(l2) + t2;
+                String sl2 = Long.toString(l2);
+                String s2 =sl2.length() + sl2 + t2;
                 return -s1.compareTo(s2);
             }
         };
         TreeMap<String, TermInfo> m = new TreeMap<String, TermInfo>(comp);
         m.putAll(map);
         if (size != null && size > 0) {
-            TreeMap<String, TermInfo> n = new TreeMap<String, TermInfo>(comp);
-            Map.Entry<String, TermInfo> me = m.pollFirstEntry();
-            while (me != null && size-- > 0) {
-                n.put(me.getKey(), me.getValue());
-                me = m.pollFirstEntry();
+            TreeMap<String, TermInfo> treeMap = new TreeMap<String, TermInfo>(comp);
+            for (int i = 0; i < m.size(); i++) {
+                Map.Entry<String, TermInfo> me = m.pollFirstEntry();
+                if (i > from && i<= from + size) {
+                    treeMap.put(me.getKey(), me.getValue());
+                }
             }
-            return n;
+            return treeMap;
         }
         return m;
     }
 
-    private SortedMap<String, TermInfo> sortDocFreq(final Map<String, TermInfo> map, Integer size) {
+    private SortedMap<String, TermInfo> sortDocFreq(final Map<String, TermInfo> map, Integer from, Integer size) {
         Comparator<String> comp = new Comparator<String>() {
             @Override
             public int compare(String t1, String t2) {
                 Integer i1 = map.get(t1).getDocFreq();
-                String s1 = Integer.toString(i1).length() + Integer.toString(i1) + t1;
+                String si1 = Integer.toString(i1);
+                String s1 = si1.length() + si1 + t1;
                 Integer i2 = map.get(t2).getDocFreq();
-                String s2 = Integer.toString(i2).length() + Integer.toString(i2) + t2;
+                String si2 = Integer.toString(i2);
+                String s2 = si2.length() + si2 + t2;
                 return -s1.compareTo(s2);
             }
         };
         TreeMap<String, TermInfo> m = new TreeMap<String, TermInfo>(comp);
         m.putAll(map);
         if (size != null && size > 0) {
-            TreeMap<String, TermInfo> n = new TreeMap<String, TermInfo>(comp);
-            Map.Entry<String, TermInfo> me = m.pollFirstEntry();
-            while (me != null && size-- > 0) {
-                n.put(me.getKey(), me.getValue());
-                me = m.pollFirstEntry();
+            TreeMap<String, TermInfo> treeMap = new TreeMap<String, TermInfo>(comp);
+            for (int i = 0; i < m.size(); i++) {
+                Map.Entry<String, TermInfo> me = m.pollFirstEntry();
+                if (i > from && i<= from + size) {
+                    treeMap.put(me.getKey(), me.getValue());
+                }
             }
-            return n;
+            return treeMap;
         }
         return m;
     }
 
-    private Map<String, TermInfo> truncate(Map<String, TermInfo> source, Integer max) {
-        if (max == null || max < 1) {
+    private Map<String, TermInfo> truncate(Map<String, TermInfo> source, Integer from, Integer size) {
+        if (size == null || size < 1) {
             return source;
         }
-        int count = 0;
         Map<String, TermInfo> target = new CompactHashMap<String, TermInfo>();
-        for (Map.Entry<String, TermInfo> entry : source.entrySet()) {
-            if (count >= max) {
-                break;
+        Iterator<Map.Entry<String, TermInfo>> it = source.entrySet().iterator();
+        for (int i = 0 ; i < source.size(); i++) {
+            Map.Entry<String, TermInfo> entry = it.next();
+            if (i > from && i <= from + size) {
+                target.put(entry.getKey(), entry.getValue());
             }
-            target.put(entry.getKey(), entry.getValue());
-            count++;
         }
         return target;
     }

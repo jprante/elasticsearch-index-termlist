@@ -8,9 +8,9 @@ import java.io.IOException;
 
 public class TermInfo implements Streamable {
 
-    Integer docFreq;
+    private Integer docFreq;
 
-    Long totalFreq;
+    private Long totalFreq;
 
     public TermInfo docfreq(int docFreq) {
         this.docFreq = docFreq;
