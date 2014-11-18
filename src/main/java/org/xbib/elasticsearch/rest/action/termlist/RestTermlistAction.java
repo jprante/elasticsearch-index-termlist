@@ -27,7 +27,7 @@ public class RestTermlistAction extends BaseRestHandler {
 
     @Inject
     public RestTermlistAction(Settings settings, Client client, RestController controller) {
-        super(settings, client);
+        super(settings, controller, client);
         controller.registerHandler(GET, "/_termlist", this);
         controller.registerHandler(GET, "/{index}/_termlist", this);
         controller.registerHandler(GET, "/{index}/{field}/_termlist", this);

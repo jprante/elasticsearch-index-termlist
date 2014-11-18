@@ -3,10 +3,13 @@ package org.xbib.elasticsearch.action.termlist;
 import org.elasticsearch.action.support.broadcast.BroadcastShardOperationRequest;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.index.shard.ShardId;
 
 import java.io.IOException;
 
 class ShardTermlistRequest extends BroadcastShardOperationRequest {
+
+    private String index;
 
     private String field;
 
@@ -23,14 +26,19 @@ class ShardTermlistRequest extends BroadcastShardOperationRequest {
     ShardTermlistRequest() {
     }
 
-    public ShardTermlistRequest(String index, int shardId, TermlistRequest request) {
-        super(index, shardId, request);
+    public ShardTermlistRequest(String index, ShardId shardId, TermlistRequest request) {
+        super(shardId, request);
+        this.index = index;
         this.field = request.getField();
         this.term = request.getTerm();
         this.from = request.getFrom();
         this.size = request.getSize();
         this.withDocFreq = request.getWithDocFreq();
         this.withTotalFreq = request.getWithTotalFreq();
+    }
+
+    public String getIndex() {
+        return index;
     }
 
     public void setField(String field) {
@@ -84,6 +92,7 @@ class ShardTermlistRequest extends BroadcastShardOperationRequest {
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
+        index = in.readString();
         field = in.readString();
         term = in.readString();
         from = in.readInt();
@@ -95,6 +104,7 @@ class ShardTermlistRequest extends BroadcastShardOperationRequest {
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
+        out.writeString(index);
         out.writeString(field);
         out.writeString(term);
         out.writeInt(from);

@@ -3,6 +3,7 @@ package org.xbib.elasticsearch.action.termlist;
 import org.elasticsearch.action.support.broadcast.BroadcastShardOperationResponse;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.index.shard.ShardId;
 import org.xbib.elasticsearch.common.termlist.CompactHashMap;
 
 import java.io.IOException;
@@ -10,14 +11,21 @@ import java.util.Map;
 
 class ShardTermlistResponse extends BroadcastShardOperationResponse {
 
+    private String index;
+
     private Map<String, TermInfo> map;
 
     ShardTermlistResponse() {
     }
 
-    public ShardTermlistResponse(String index, int shardId, Map<String, TermInfo> map) {
-        super(index, shardId);
+    public ShardTermlistResponse(String index, ShardId shardId, Map<String, TermInfo> map) {
+        super(shardId);
+        this.index = index;
         this.map = map;
+    }
+
+    public String getIndex() {
+        return index;
     }
 
     public Map<String, TermInfo> getTermList() {

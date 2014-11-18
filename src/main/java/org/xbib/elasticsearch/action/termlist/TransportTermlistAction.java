@@ -17,6 +17,7 @@ import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ShardOperationFailedException;
+import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.DefaultShardOperationFailedException;
 import org.elasticsearch.action.support.broadcast.BroadcastShardOperationFailedException;
 import org.elasticsearch.action.support.broadcast.TransportBroadcastOperationAction;
@@ -47,8 +48,9 @@ public class TransportTermlistAction
 
     @Inject
     public TransportTermlistAction(Settings settings, ThreadPool threadPool, ClusterService clusterService,
-                                   TransportService transportService, IndicesService indicesService) {
-        super(settings, TermlistAction.NAME, threadPool, clusterService, transportService);
+                                   TransportService transportService, IndicesService indicesService,
+                                   ActionFilters actionFilters) {
+        super(settings, TermlistAction.NAME, threadPool, clusterService, transportService, actionFilters);
         this.indicesService = indicesService;
     }
 
@@ -100,7 +102,7 @@ public class TransportTermlistAction
 
     @Override
     protected ShardTermlistRequest newShardRequest(int numShards, ShardRouting shard, TermlistRequest request) {
-        return new ShardTermlistRequest(shard.index(), shard.id(), request);
+        return new ShardTermlistRequest(shard.getIndex(), shard.shardId(), request);
     }
 
     @Override
@@ -128,7 +130,7 @@ public class TransportTermlistAction
 
     @Override
     protected ShardTermlistResponse shardOperation(ShardTermlistRequest request) throws ElasticsearchException {
-        InternalIndexShard indexShard = (InternalIndexShard) indicesService.indexServiceSafe(request.index()).shardSafe(request.shardId());
+        InternalIndexShard indexShard = (InternalIndexShard) indicesService.indexServiceSafe(request.getIndex()).shardSafe(request.shardId().id());
         Engine.Searcher searcher = indexShard.engine().acquireSearcher("termlist");
         try {
             Map<String, TermInfo> map = new CompactHashMap<String, TermInfo>();
@@ -169,7 +171,7 @@ public class TransportTermlistAction
                     }
                 }
             }
-            return new ShardTermlistResponse(request.index(), request.shardId(), map);
+            return new ShardTermlistResponse(request.getIndex(), request.shardId(), map);
         } catch (IOException ex) {
             throw new ElasticsearchException(ex.getMessage(), ex);
         } finally {
