@@ -225,7 +225,7 @@ public class TransportTermlistAction
             TreeMap<String, TermInfo> treeMap = new TreeMap<String, TermInfo>(comp);
             for (int i = 0; i < m.size(); i++) {
                 Map.Entry<String, TermInfo> me = m.pollFirstEntry();
-                if (i > from && i<= from + size) {
+                if (from <= i && i < from + size) {
                     treeMap.put(me.getKey(), me.getValue());
                 }
             }
@@ -252,7 +252,7 @@ public class TransportTermlistAction
             TreeMap<String, TermInfo> treeMap = new TreeMap<String, TermInfo>(comp);
             for (int i = 0; i < m.size(); i++) {
                 Map.Entry<String, TermInfo> me = m.pollFirstEntry();
-                if (i > from && i<= from + size) {
+                if (from <= i && i < from + size) {
                     treeMap.put(me.getKey(), me.getValue());
                 }
             }
@@ -280,7 +280,7 @@ public class TransportTermlistAction
             TreeMap<String, TermInfo> treeMap = new TreeMap<String, TermInfo>(comp);
             for (int i = 0; i < m.size(); i++) {
                 Map.Entry<String, TermInfo> me = m.pollFirstEntry();
-                if (i > from && i<= from + size) {
+                if (from <= i && i < from + size) {
                     treeMap.put(me.getKey(), me.getValue());
                 }
             }
@@ -297,7 +297,7 @@ public class TransportTermlistAction
         Iterator<Map.Entry<String, TermInfo>> it = source.entrySet().iterator();
         for (int i = 0 ; i < source.size(); i++) {
             Map.Entry<String, TermInfo> entry = it.next();
-            if (i > from && i <= from + size) {
+            if (from <= i && i < from + size) {
                 target.put(entry.getKey(), entry.getValue());
             }
         }
