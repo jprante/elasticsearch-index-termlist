@@ -1,6 +1,5 @@
 package org.xbib.elasticsearch.action.termlist;
 
-import java.io.IOException;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -9,6 +8,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
+import org.apache.lucene.index.DocsAndPositionsEnum;
 import org.apache.lucene.index.Fields;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.MultiFields;
@@ -88,9 +88,9 @@ public class TransportTermlistAction
         }
         int size = map.size();
         map = request.sortByTotalFreq() ? sortTotalFreq(map, request.getFrom(), request.getSize()) :
-              request.sortByDocFreq() ? sortDocFreq(map, request.getFrom(), request.getSize()) :
-              request.sortByTerm() ? sortTerm(map, request.getFrom(), request.getSize()) :
-              truncate(map, request.getFrom(), request.getSize());
+                request.sortByDocFreq() ? sortDocFreq(map, request.getFrom(), request.getSize()) :
+                        request.sortByTerm() ? sortTerm(map, request.getFrom(), request.getSize()) :
+                                truncate(map, request.getFrom(), request.getSize());
 
         return new TermlistResponse(shardsResponses.length(), successfulShards, failedShards, shardFailures, size, map);
     }
@@ -142,8 +142,9 @@ public class TransportTermlistAction
                     if (field.charAt(0) == '_') {
                         continue;
                     }
-                    if (request.getField() == null || field.equals(request.getField())) {
+                    if (request.getRequest().getField() == null || field.equals(request.getRequest().getField())) {
                         Terms terms = fields.terms(field);
+                        // Returns the number of documents that have at least one
                         if (terms != null) {
                             TermsEnum termsEnum = terms.iterator(null);
                             BytesRef text;
@@ -157,13 +158,23 @@ public class TransportTermlistAction
                                 }
                                 String term = text.utf8ToString();
                                 TermInfo termInfo = new TermInfo();
-                                if (request.getWithDocFreq()) {
-                                    termInfo.docfreq(termsEnum.docFreq());
+                                if (request.getRequest().getWithTermFreq()) {
+                                    // just get first document and pos (which is absurd...)
+                                    DocsAndPositionsEnum docPosEnum = termsEnum.docsAndPositions(null, null);
+                                    docPosEnum.nextDoc();
+                                    termInfo.setTermFreq(docPosEnum.freq());
                                 }
-                                if (request.getWithTotalFreq()) {
-                                    termInfo.totalFreq(termsEnum.totalTermFreq());
+                                if (request.getRequest().getWithDocFreq()) {
+                                    // the number of documents containing this term
+                                    termInfo.setDocFreq(termsEnum.docFreq());
                                 }
-                                if (request.getTerm() == null || term.startsWith(request.getTerm())) {
+                                if (request.getRequest().getWithTotalFreq()) {
+                                    // Returns the total number of occurrences of this term
+                                    // across all documents (the sum of the freq() for each
+                                    // doc that has this term).
+                                    termInfo.setTotalFreq(termsEnum.totalTermFreq());
+                                }
+                                if (request.getRequest().getTerm() == null || term.startsWith(request.getRequest().getTerm())) {
                                     map.put(term, termInfo);
                                 }
                             }
@@ -172,7 +183,8 @@ public class TransportTermlistAction
                 }
             }
             return new ShardTermlistResponse(request.getIndex(), request.shardId(), map);
-        } catch (IOException ex) {
+        } catch (Throwable ex) {
+            logger.error(ex.getMessage(), ex);
             throw new ElasticsearchException(ex.getMessage(), ex);
         } finally {
             searcher.close();
@@ -183,24 +195,44 @@ public class TransportTermlistAction
         for (Map.Entry<String, TermInfo> t : other.entrySet()) {
             if (map.containsKey(t.getKey())) {
                 TermInfo info = map.get(t.getKey());
+                Integer termFreq = info.getTermFreq();
+                if (termFreq != null) {
+                    if (t.getValue().getTermFreq() != null) {
+                        info.setTermFreq(termFreq + t.getValue().getTermFreq());
+                    }
+                } else {
+                    if (t.getValue().getTermFreq() != null) {
+                        info.setTermFreq(t.getValue().getTermFreq());
+                    }
+                }
+                Integer docCount = info.getDocCount();
+                if (docCount != null) {
+                    if (t.getValue().getDocCount() != null) {
+                        info.setDocCount(docCount + t.getValue().getDocCount());
+                    }
+                } else {
+                    if (t.getValue().getDocCount() != null) {
+                        info.setDocCount(t.getValue().getDocCount());
+                    }
+                }
                 Integer docFreq = info.getDocFreq();
                 if (docFreq != null) {
                     if (t.getValue().getDocFreq() != null) {
-                        info.docfreq(docFreq + t.getValue().getDocFreq());
+                        info.setDocFreq(docFreq + t.getValue().getDocFreq());
                     }
                 } else {
                     if (t.getValue().getDocFreq() != null) {
-                        info.docfreq(t.getValue().getDocFreq());
+                        info.setDocFreq(t.getValue().getDocFreq());
                     }
                 }
                 Long totalFreq = info.getTotalFreq();
                 if (totalFreq != null) {
                     if (t.getValue().getTotalFreq() != null) {
-                        info.totalFreq(totalFreq + t.getValue().getTotalFreq());
+                        info.setTotalFreq(totalFreq + t.getValue().getTotalFreq());
                     }
                 } else {
                     if (t.getValue().getTotalFreq() != null) {
-                        info.totalFreq(t.getValue().getTotalFreq());
+                        info.setTotalFreq(t.getValue().getTotalFreq());
                     }
                 }
             } else {

@@ -16,6 +16,10 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
 
     private Integer size;
 
+    private boolean withTermFreq;
+
+    private boolean withDocCount;
+
     private boolean withDocFreq;
 
     private boolean withTotalFreq;
@@ -65,6 +69,22 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
         return size;
     }
 
+    public void setWithTermFreq(boolean withTermFreq) {
+        this.withTermFreq = withTermFreq;
+    }
+
+    public boolean getWithTermFreq() {
+        return withTermFreq;
+    }
+
+    public void setWithDocCount(boolean withDocCount) {
+        this.withDocCount = withDocCount;
+    }
+
+    public boolean getWithDocCount() {
+        return withDocCount;
+    }
+
     public void setWithDocFreq(boolean withDocFreq) {
         this.withDocFreq = withDocFreq;
     }
@@ -105,6 +125,12 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
         return sortByTotalFreq;
     }
 
+    static TermlistRequest from(StreamInput in) throws IOException {
+        TermlistRequest request = new TermlistRequest();
+        request.readFrom(in);
+        return request;
+    }
+
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
@@ -112,8 +138,10 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
         term = in.readString();
         from = in.readInt();
         size = in.readInt();
+        withDocCount = in.readBoolean();
         withDocFreq = in.readBoolean();
         withTotalFreq = in.readBoolean();
+        sortByTerm = in.readBoolean();
         sortByDocFreq = in.readBoolean();
         sortByTotalFreq = in.readBoolean();
 
@@ -126,8 +154,10 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
         out.writeString(term);
         out.writeInt(from);
         out.writeInt(size);
+        out.writeBoolean(withDocCount);
         out.writeBoolean(withDocFreq);
         out.writeBoolean(withTotalFreq);
+        out.writeBoolean(sortByTerm);
         out.writeBoolean(sortByDocFreq);
         out.writeBoolean(sortByTotalFreq);
     }

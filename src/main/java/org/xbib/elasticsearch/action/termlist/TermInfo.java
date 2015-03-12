@@ -8,11 +8,33 @@ import java.io.IOException;
 
 public class TermInfo implements Streamable {
 
+    private Integer termFreq;
+
+    private Integer docCount;
+
     private Integer docFreq;
 
     private Long totalFreq;
 
-    public TermInfo docfreq(int docFreq) {
+    public TermInfo setTermFreq(int termFreq) {
+        this.termFreq = termFreq;
+        return this;
+    }
+
+    public Integer getTermFreq() {
+        return termFreq;
+    }
+
+    public TermInfo setDocCount(int docCount) {
+        this.docCount = docCount;
+        return this;
+    }
+
+    public Integer getDocCount() {
+        return docCount;
+    }
+
+    public TermInfo setDocFreq(int docFreq) {
         this.docFreq = docFreq;
         return this;
     }
@@ -21,7 +43,7 @@ public class TermInfo implements Streamable {
         return docFreq;
     }
 
-    public TermInfo totalFreq(long totalFreq) {
+    public TermInfo setTotalFreq(long totalFreq) {
         this.totalFreq = totalFreq;
         return this;
     }
@@ -34,27 +56,45 @@ public class TermInfo implements Streamable {
     public void readFrom(StreamInput in) throws IOException {
         boolean b = in.readBoolean();
         if (b) {
-            docfreq(in.readInt());
+            setTermFreq(in.readInt());
         }
         b = in.readBoolean();
         if (b) {
-            totalFreq(in.readVLong());
+            setDocCount(in.readInt());
+        }
+        b = in.readBoolean();
+        if (b) {
+            setDocFreq(in.readInt());
+        }
+        b = in.readBoolean();
+        if (b) {
+            setTotalFreq(in.readVLong());
         }
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        Integer i = getDocFreq();
-        if (i != null) {
+        if (termFreq != null) {
             out.writeBoolean(true);
-            out.writeInt(i);
+            out.writeInt(termFreq);
         } else {
             out.writeBoolean(false);
         }
-        Long l = getTotalFreq();
-        if (l != null) {
+        if (docCount != null) {
             out.writeBoolean(true);
-            out.writeVLong(l);
+            out.writeInt(docCount);
+        } else {
+            out.writeBoolean(false);
+        }
+        if (docFreq != null) {
+            out.writeBoolean(true);
+            out.writeInt(docFreq);
+        } else {
+            out.writeBoolean(false);
+        }
+        if (totalFreq != null) {
+            out.writeBoolean(true);
+            out.writeVLong(totalFreq);
         } else {
             out.writeBoolean(false);
         }

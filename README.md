@@ -8,6 +8,7 @@ indexes.
 
 | Elasticsearch  | Plugin       | Release date |
 | -------------- | ------------ | ------------ |
+| 1.4.0          | 1.4.0.2      | Jan 14, 2015 |
 | 1.4.0          | 1.4.0.1      | Jan 14, 2015 |
 | 1.4.0          | 1.4.0.0      | Nov 18, 2014 |
 | 1.3.2          | 1.3.0.0      | Aug 21, 2014 |
@@ -15,7 +16,7 @@ indexes.
 
 ## Installation
 
-    ./bin/plugin -install index-termlist -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-index-termlist/1.4.0.1/elasticsearch-index-termlist-1.4.0.1-plugin.zip
+    ./bin/plugin -install index-termlist -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-index-termlist/1.4.0.2/elasticsearch-index-termlist-1.4.0.2-plugin.zip
 
 Do not forget to restart the node after installing.
 
@@ -62,6 +63,11 @@ Get term list of index `test` of field `message`
 
 	curl -XGET 'http://localhost:9200/test/_termlist?field=message'
 	{"_shards":{"total":5,"successful":5,"failed":0},"total":2,"terms":[{"name":"elastic"},{"name":"search"}]}
+
+Get term list of index `test` with doc count
+
+	curl -XGET 'http://localhost:9200/test/_termlist?totalfreqs'
+	{"_shards":{"total":5,"successful":5,"failed":0},"total":6,"terms":[{"name":"search","totalfreq":1},{"name":"prante","totalfreq":1},{"name":"hello","totalfreq":2},{"name":"world","totalfreq":1},{"name":"jörg","totalfreq":1},{"name":"elastic","totalfreq":1}]}
 
 Get term list of index `test` with total frequencies
 

@@ -6,13 +6,13 @@
 
     <groupId>org.xbib.elasticsearch.plugin</groupId>
     <artifactId>elasticsearch-index-termlist</artifactId>
-    <version>1.4.0.1</version>
+    <version>1.4.0.2</version>
 
     <packaging>jar</packaging>
 
     <name>Elasticsearch Index Termlist Plugin</name>
     <description>
-        Index Termlist is a simple Elasticsearch plugin
+        A simple Elasticsearch plugin for displaying term lists
     </description>
 
     <url>http://github.com/jprante/elasticsearch-index-termlist</url>
