@@ -134,8 +134,8 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
-        field = in.readString();
-        term = in.readString();
+        field = in.readOptionalString();
+        term = in.readOptionalString();
         from = in.readInt();
         size = in.readInt();
         withDocCount = in.readBoolean();
@@ -150,8 +150,8 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
-        out.writeString(field);
-        out.writeString(term);
+        out.writeOptionalString(field);
+        out.writeOptionalString(term);
         out.writeInt(from);
         out.writeInt(size);
         out.writeBoolean(withDocCount);

@@ -73,14 +73,16 @@ public class TransportTermlistAction
         for (int i = 0; i < shardsResponses.length(); i++) {
             Object shardResponse = shardsResponses.get(i);
             if (shardResponse instanceof BroadcastShardOperationFailedException) {
+                BroadcastShardOperationFailedException e = (BroadcastShardOperationFailedException)shardResponse;
+                logger.error(e.getMessage(), e);
                 failedShards++;
                 if (shardFailures == null) {
                     shardFailures = newLinkedList();
                 }
-                shardFailures.add(new DefaultShardOperationFailedException((BroadcastShardOperationFailedException) shardResponse));
+                shardFailures.add(new DefaultShardOperationFailedException(e));
             } else {
-                successfulShards++;
                 if (shardResponse instanceof ShardTermlistResponse) {
+                    successfulShards++;
                     ShardTermlistResponse resp = (ShardTermlistResponse) shardResponse;
                     merge(map, resp.getTermList());
                 }

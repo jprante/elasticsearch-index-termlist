@@ -8,6 +8,7 @@ indexes.
 
 | Elasticsearch  | Plugin       | Release date |
 | -------------- | ------------ | ------------ |
+| 1.4.4          | 1.4.4.0      | Mar 15, 2015 |
 | 1.4.0          | 1.4.0.2      | Feb 19, 2015 |
 | 1.4.0          | 1.4.0.1      | Jan 14, 2015 |
 | 1.4.0          | 1.4.0.0      | Nov 18, 2014 |
@@ -16,7 +17,7 @@ indexes.
 
 ## Installation
 
-    ./bin/plugin -install index-termlist -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-index-termlist/1.4.0.2/elasticsearch-index-termlist-1.4.0.2-plugin.zip
+    ./bin/plugin -install index-termlist -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-index-termlist/1.4.4.0/elasticsearch-index-termlist-1.4.4.0-plugin.zip
 
 Do not forget to restart the node after installing.
 
