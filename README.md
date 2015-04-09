@@ -18,7 +18,7 @@ indexes.
 
 ## Installation
 
-    ./bin/plugin -install index-termlist -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-index-termlist/1.4.4.0/elasticsearch-index-termlist-1.4.4.0-plugin.zip
+    ./bin/plugin -install index-termlist -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-index-termlist/1.5.0.0/elasticsearch-index-termlist-1.5.0.0-plugin.zip
 
 Do not forget to restart the node after installing.
 
