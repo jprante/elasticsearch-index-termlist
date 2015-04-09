@@ -43,6 +43,11 @@ public class TermlistRequestBuilder extends BroadcastOperationRequestBuilder<Ter
         return this;
     }
 
+    public TermlistRequestBuilder withTermFreq() {
+        request.setWithTermFreq(true);
+        return this;
+    }
+
     public TermlistRequestBuilder withTotalFreq() {
         request.setWithTotalFreq(true);
         return this;
@@ -57,7 +62,6 @@ public class TermlistRequestBuilder extends BroadcastOperationRequestBuilder<Ter
         request.sortByTotalFreq(sortByTotalFreq);
         return this;
     }
-
 
     @Override
     protected void doExecute(ActionListener<TermlistResponse> listener) {

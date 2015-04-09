@@ -65,22 +65,13 @@ public class RestTermlistAction extends BaseRestHandler {
                         builder.startObject().field("name", t.getKey());
                         if (t.getValue().getTermFreq() != null) {
                             builder.field("termfreq", t.getValue().getTermFreq());
-                        }
-                        if (t.getValue().getDocCount() != null) {
-                            builder.field("doccount", t.getValue().getDocCount());
+                            builder.field("tfidf", t.getValue().getTfIdf());
                         }
                         if (t.getValue().getDocFreq() != null) {
                             builder.field("docfreq", t.getValue().getDocFreq());
                         }
                         if (t.getValue().getTotalFreq() != null) {
                             builder.field("totalfreq", t.getValue().getTotalFreq());
-                        }
-                        // tf/idf possible?
-                        if (t.getValue().getTermFreq() != null && t.getValue().getDocFreq() != null) {
-                            double tf = Math.sqrt(t.getValue().getTermFreq());
-                            builder.field("tf", tf);
-                            double idf = 1 + Math.log(totalDocs / t.getValue().getDocFreq() + 1);
-                            builder.field("idf", idf);
                         }
                         builder.endObject();
                     }

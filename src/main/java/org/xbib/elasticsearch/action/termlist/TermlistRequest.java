@@ -33,7 +33,7 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
     TermlistRequest() {
     }
 
-    public TermlistRequest(String[] indices) {
+    public TermlistRequest(String... indices) {
         super(indices);
     }
 

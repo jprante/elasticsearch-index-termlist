@@ -12,6 +12,7 @@ import org.apache.lucene.index.DocsAndPositionsEnum;
 import org.apache.lucene.index.Fields;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.MultiFields;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.util.BytesRef;
@@ -30,7 +31,7 @@ import org.elasticsearch.cluster.routing.ShardRouting;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.engine.Engine;
-import org.elasticsearch.index.shard.service.InternalIndexShard;
+import org.elasticsearch.index.shard.IndexShard;
 import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
@@ -48,7 +49,8 @@ public class TransportTermlistAction
 
     @Inject
     public TransportTermlistAction(Settings settings, ThreadPool threadPool, ClusterService clusterService,
-                                   TransportService transportService, IndicesService indicesService,
+                                   TransportService transportService,
+                                   IndicesService indicesService,
                                    ActionFilters actionFilters) {
         super(settings, TermlistAction.NAME, threadPool, clusterService, transportService, actionFilters);
         this.indicesService = indicesService;
@@ -132,7 +134,7 @@ public class TransportTermlistAction
 
     @Override
     protected ShardTermlistResponse shardOperation(ShardTermlistRequest request) throws ElasticsearchException {
-        InternalIndexShard indexShard = (InternalIndexShard) indicesService.indexServiceSafe(request.getIndex()).shardSafe(request.shardId().id());
+        IndexShard indexShard = indicesService.indexServiceSafe(request.getIndex()).shardSafe(request.shardId().id());
         Engine.Searcher searcher = indexShard.engine().acquireSearcher("termlist");
         try {
             Map<String, TermInfo> map = new CompactHashMap<String, TermInfo>();
@@ -158,13 +160,19 @@ public class TransportTermlistAction
                                 if (termsEnum.totalTermFreq() < 1) {
                                     continue;
                                 }
-                                String term = text.utf8ToString();
+                                Term term = new Term(field, text);
                                 TermInfo termInfo = new TermInfo();
                                 if (request.getRequest().getWithTermFreq()) {
-                                    // just get first document and pos (which is absurd...)
                                     DocsAndPositionsEnum docPosEnum = termsEnum.docsAndPositions(null, null);
-                                    docPosEnum.nextDoc();
-                                    termInfo.setTermFreq(docPosEnum.freq());
+                                    int freq = 0;
+                                    // ??? how to mark doc to select for tf/idf ???
+                                    while (docPosEnum.nextDoc() != DocsAndPositionsEnum.NO_MORE_DOCS) {
+                                        // doc ID is docPosEnum.docID();
+                                        // add term freq per doc
+                                        freq += docPosEnum.freq();
+                                    }
+                                    // total term freq ... wrong
+                                    termInfo.setTermFreq(freq);
                                 }
                                 if (request.getRequest().getWithDocFreq()) {
                                     // the number of documents containing this term
@@ -176,8 +184,9 @@ public class TransportTermlistAction
                                     // doc that has this term).
                                     termInfo.setTotalFreq(termsEnum.totalTermFreq());
                                 }
-                                if (request.getRequest().getTerm() == null || term.startsWith(request.getRequest().getTerm())) {
-                                    map.put(term, termInfo);
+
+                                if (request.getRequest().getTerm() == null || term.text().startsWith(request.getRequest().getTerm())) {
+                                    map.put(term.text(), termInfo);
                                 }
                             }
                         }
@@ -207,16 +216,6 @@ public class TransportTermlistAction
                         info.setTermFreq(t.getValue().getTermFreq());
                     }
                 }
-                Integer docCount = info.getDocCount();
-                if (docCount != null) {
-                    if (t.getValue().getDocCount() != null) {
-                        info.setDocCount(docCount + t.getValue().getDocCount());
-                    }
-                } else {
-                    if (t.getValue().getDocCount() != null) {
-                        info.setDocCount(t.getValue().getDocCount());
-                    }
-                }
                 Integer docFreq = info.getDocFreq();
                 if (docFreq != null) {
                     if (t.getValue().getDocFreq() != null) {
@@ -236,6 +235,11 @@ public class TransportTermlistAction
                     if (t.getValue().getTotalFreq() != null) {
                         info.setTotalFreq(t.getValue().getTotalFreq());
                     }
+                }
+                if (info.getTermFreq() != null && info.getTotalFreq() != null && info.getDocFreq() != null) {
+                    double tf = Math.sqrt(info.getTermFreq());
+                    double idf = Math.log((info.getTotalFreq() / (double) info.getDocFreq() + 1) + 1.0);
+                    info.setTfIdf(tf * idf);
                 }
             } else {
                 map.put(t.getKey(), t.getValue());
