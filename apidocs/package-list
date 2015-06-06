@@ -1,3 +1,5 @@
 org.xbib.elasticsearch.action.termlist
+org.xbib.elasticsearch.common.termlist
+org.xbib.elasticsearch.common.termlist.math
 org.xbib.elasticsearch.plugin.termlist
 org.xbib.elasticsearch.rest.action.termlist
