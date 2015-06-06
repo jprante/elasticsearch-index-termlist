@@ -15,7 +15,7 @@ import java.util.Map;
  */
 public class TermlistResponse extends BroadcastOperationResponse {
 
-    private int size;
+    private int numdocs;
 
     private Map<String, TermInfo> map;
 
@@ -24,15 +24,15 @@ public class TermlistResponse extends BroadcastOperationResponse {
 
     TermlistResponse(int totalShards, int successfulShards, int failedShards,
                      List<ShardOperationFailedException> shardFailures,
-                     int size,
+                     int numdocs,
                      Map<String, TermInfo> map) {
         super(totalShards, successfulShards, failedShards, shardFailures);
-        this.size = size;
+        this.numdocs = numdocs;
         this.map = map;
     }
 
-    public int getSize() {
-        return size;
+    public int getNumDocs() {
+        return numdocs;
     }
 
     public Map<String, TermInfo> getTermlist() {
@@ -42,7 +42,7 @@ public class TermlistResponse extends BroadcastOperationResponse {
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
-        size = in.readInt();
+        numdocs = in.readInt();
         int n = in.readInt();
         map = new CompactHashMap<String, TermInfo>();
         for (int i = 0; i < n; i++) {
@@ -56,7 +56,7 @@ public class TermlistResponse extends BroadcastOperationResponse {
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
-        out.writeInt(size);
+        out.writeInt(numdocs);
         out.writeInt(map.size());
         for (Map.Entry<String, TermInfo> t : map.entrySet()) {
             out.writeString(t.getKey());

@@ -10,7 +10,7 @@ import java.util.Set;
 
 /**
  * A memory-efficient hash map.
- * <p/>
+ *
  * Modified version of com.google.gwt.dev.util.collect.HashMap
  *
  * @param <K> the key type
@@ -618,6 +618,9 @@ public class CompactHashMap<K, V> implements Map<K, V> {
 
     /**
      * Returns whether two keys are equal for the purposes of this set.
+     * @param a left key
+     * @param b right key
+     * @return true if keys are equal
      */
     protected boolean keyEquals(Object a, Object b) {
         return (a == null) ? (b == null) : a.equals(b);
@@ -625,6 +628,8 @@ public class CompactHashMap<K, V> implements Map<K, V> {
 
     /**
      * Returns the hashCode for a key.
+     * @param k object
+     * @return key hash code
      */
     protected int keyHashCode(Object k) {
         return (k == null) ? 0 : k.hashCode();
@@ -632,6 +637,9 @@ public class CompactHashMap<K, V> implements Map<K, V> {
 
     /**
      * Returns whether two values are equal for the purposes of this set.
+     * @param a left value
+     * @param b right value
+     * @return true if values are equal
      */
     protected boolean valueEquals(Object a, Object b) {
         return (a == null) ? (b == null) : a.equals(b);
@@ -639,6 +647,8 @@ public class CompactHashMap<K, V> implements Map<K, V> {
 
     /**
      * Returns the hashCode for a value.
+     * @param v object
+     * @return value hash code
      */
     protected int valueHashCode(Object v) {
         return (v == null) ? 0 : v.hashCode();
@@ -647,6 +657,7 @@ public class CompactHashMap<K, V> implements Map<K, V> {
     /**
      * Ensures the map is large enough to contain the specified number of entries.
      * Default access to avoid synthetic accessors from inner classes.
+     * @param expectedSize expected size
      */
     void ensureSizeFor(int expectedSize) {
         if (keys.length * 3 >= expectedSize * 4) {

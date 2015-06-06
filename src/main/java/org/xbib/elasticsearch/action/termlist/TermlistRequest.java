@@ -14,7 +14,7 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
 
     private Integer from;
 
-    private Integer size;
+    private Integer size = -1;
 
     private boolean withTermFreq;
 
@@ -69,38 +69,6 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
         return size;
     }
 
-    public void setWithTermFreq(boolean withTermFreq) {
-        this.withTermFreq = withTermFreq;
-    }
-
-    public boolean getWithTermFreq() {
-        return withTermFreq;
-    }
-
-    public void setWithDocCount(boolean withDocCount) {
-        this.withDocCount = withDocCount;
-    }
-
-    public boolean getWithDocCount() {
-        return withDocCount;
-    }
-
-    public void setWithDocFreq(boolean withDocFreq) {
-        this.withDocFreq = withDocFreq;
-    }
-
-    public boolean getWithDocFreq() {
-        return withDocFreq;
-    }
-
-    public void setWithTotalFreq(boolean withTotalFreq) {
-        this.withTotalFreq = withTotalFreq;
-    }
-
-    public boolean getWithTotalFreq() {
-        return withTotalFreq;
-    }
-
     public void sortByTerm(boolean sortByTerm) {
         this.sortByTerm = sortByTerm;
     }
@@ -138,6 +106,7 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
         term = in.readOptionalString();
         from = in.readInt();
         size = in.readInt();
+        withTermFreq = in.readBoolean();
         withDocCount = in.readBoolean();
         withDocFreq = in.readBoolean();
         withTotalFreq = in.readBoolean();
@@ -154,6 +123,7 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
         out.writeOptionalString(term);
         out.writeInt(from);
         out.writeInt(size);
+        out.writeBoolean(withTermFreq);
         out.writeBoolean(withDocCount);
         out.writeBoolean(withDocFreq);
         out.writeBoolean(withTotalFreq);

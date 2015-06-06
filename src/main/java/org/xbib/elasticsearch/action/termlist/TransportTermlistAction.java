@@ -29,6 +29,8 @@ import org.elasticsearch.cluster.block.ClusterBlockLevel;
 import org.elasticsearch.cluster.routing.GroupShardsIterator;
 import org.elasticsearch.cluster.routing.ShardRouting;
 import org.elasticsearch.common.inject.Inject;
+import org.elasticsearch.common.logging.ESLogger;
+import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.engine.Engine;
 import org.elasticsearch.index.shard.IndexShard;
@@ -36,6 +38,7 @@ import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 import org.xbib.elasticsearch.common.termlist.CompactHashMap;
+import org.xbib.elasticsearch.common.termlist.math.SummaryStatistics;
 
 import static org.elasticsearch.common.collect.Lists.newLinkedList;
 
@@ -44,6 +47,8 @@ import static org.elasticsearch.common.collect.Lists.newLinkedList;
  */
 public class TransportTermlistAction
         extends TransportBroadcastOperationAction<TermlistRequest, TermlistResponse, ShardTermlistRequest, ShardTermlistResponse> {
+
+    private final static ESLogger logger = ESLoggerFactory.getLogger(TransportTermlistAction.class.getName());
 
     private final IndicesService indicesService;
 
@@ -71,6 +76,7 @@ public class TransportTermlistAction
         int successfulShards = 0;
         int failedShards = 0;
         List<ShardOperationFailedException> shardFailures = null;
+        int numdocs = 0;
         Map<String, TermInfo> map = new CompactHashMap<String, TermInfo>();
         for (int i = 0; i < shardsResponses.length(); i++) {
             Object shardResponse = shardsResponses.get(i);
@@ -86,17 +92,17 @@ public class TransportTermlistAction
                 if (shardResponse instanceof ShardTermlistResponse) {
                     successfulShards++;
                     ShardTermlistResponse resp = (ShardTermlistResponse) shardResponse;
-                    merge(map, resp.getTermList());
+                    numdocs += resp.getNumDocs();
+                    update(map, resp.getTermList());
                 }
             }
         }
-        int size = map.size();
         map = request.sortByTotalFreq() ? sortTotalFreq(map, request.getFrom(), request.getSize()) :
                 request.sortByDocFreq() ? sortDocFreq(map, request.getFrom(), request.getSize()) :
                         request.sortByTerm() ? sortTerm(map, request.getFrom(), request.getSize()) :
-                                truncate(map, request.getFrom(), request.getSize());
+                                request.getSize() >= 0 ? truncate(map, request.getFrom(), request.getSize()) : map;
 
-        return new TermlistResponse(shardsResponses.length(), successfulShards, failedShards, shardFailures, size, map);
+        return new TermlistResponse(shardsResponses.length(), successfulShards, failedShards, shardFailures, numdocs, map);
     }
 
     @Override
@@ -160,32 +166,19 @@ public class TransportTermlistAction
                                 if (termsEnum.totalTermFreq() < 1) {
                                     continue;
                                 }
+                                // docFreq() = the number of documents containing the current term
+                                // totalTermFreq() = total number of occurrences of this term across all documents
                                 Term term = new Term(field, text);
-                                TermInfo termInfo = new TermInfo();
-                                if (request.getRequest().getWithTermFreq()) {
-                                    DocsAndPositionsEnum docPosEnum = termsEnum.docsAndPositions(null, null);
-                                    int freq = 0;
-                                    // ??? how to mark doc to select for tf/idf ???
-                                    while (docPosEnum.nextDoc() != DocsAndPositionsEnum.NO_MORE_DOCS) {
-                                        // doc ID is docPosEnum.docID();
-                                        // add term freq per doc
-                                        freq += docPosEnum.freq();
-                                    }
-                                    // total term freq ... wrong
-                                    termInfo.setTermFreq(freq);
-                                }
-                                if (request.getRequest().getWithDocFreq()) {
-                                    // the number of documents containing this term
-                                    termInfo.setDocFreq(termsEnum.docFreq());
-                                }
-                                if (request.getRequest().getWithTotalFreq()) {
-                                    // Returns the total number of occurrences of this term
-                                    // across all documents (the sum of the freq() for each
-                                    // doc that has this term).
-                                    termInfo.setTotalFreq(termsEnum.totalTermFreq());
-                                }
-
                                 if (request.getRequest().getTerm() == null || term.text().startsWith(request.getRequest().getTerm())) {
+                                    TermInfo termInfo = new TermInfo();
+                                    DocsAndPositionsEnum docPosEnum = termsEnum.docsAndPositions(null, null);
+                                    SummaryStatistics stat = new SummaryStatistics();
+                                    while (docPosEnum.nextDoc() != DocsAndPositionsEnum.NO_MORE_DOCS) {
+                                        stat.addValue(docPosEnum.freq());
+                                    }
+                                    termInfo.setSummaryStatistics(stat);
+                                    termInfo.setDocFreq(termsEnum.docFreq());
+                                    termInfo.setTotalFreq(termsEnum.totalTermFreq());
                                     map.put(term.text(), termInfo);
                                 }
                             }
@@ -193,7 +186,7 @@ public class TransportTermlistAction
                     }
                 }
             }
-            return new ShardTermlistResponse(request.getIndex(), request.shardId(), map);
+            return new ShardTermlistResponse(request.getIndex(), request.shardId(), reader.numDocs(), map);
         } catch (Throwable ex) {
             logger.error(ex.getMessage(), ex);
             throw new ElasticsearchException(ex.getMessage(), ex);
@@ -202,55 +195,48 @@ public class TransportTermlistAction
         }
     }
 
-    private void merge(Map<String, TermInfo> map, Map<String, TermInfo> other) {
-        for (Map.Entry<String, TermInfo> t : other.entrySet()) {
-            if (map.containsKey(t.getKey())) {
-                TermInfo info = map.get(t.getKey());
-                Integer termFreq = info.getTermFreq();
-                if (termFreq != null) {
-                    if (t.getValue().getTermFreq() != null) {
-                        info.setTermFreq(termFreq + t.getValue().getTermFreq());
-                    }
-                } else {
-                    if (t.getValue().getTermFreq() != null) {
-                        info.setTermFreq(t.getValue().getTermFreq());
-                    }
-                }
-                Integer docFreq = info.getDocFreq();
-                if (docFreq != null) {
-                    if (t.getValue().getDocFreq() != null) {
-                        info.setDocFreq(docFreq + t.getValue().getDocFreq());
-                    }
-                } else {
-                    if (t.getValue().getDocFreq() != null) {
-                        info.setDocFreq(t.getValue().getDocFreq());
-                    }
-                }
-                Long totalFreq = info.getTotalFreq();
+    private void update(Map<String, TermInfo> map, Map<String, TermInfo> other) {
+        for (Map.Entry<String, TermInfo> t2 : other.entrySet()) {
+            if (map.containsKey(t2.getKey())) {
+                TermInfo t1 = map.get(t2.getKey());
+                Long totalFreq = t1.getTotalFreq();
                 if (totalFreq != null) {
-                    if (t.getValue().getTotalFreq() != null) {
-                        info.setTotalFreq(totalFreq + t.getValue().getTotalFreq());
+                    if (t2.getValue().getTotalFreq() != null) {
+                        t1.setTotalFreq(totalFreq + t2.getValue().getTotalFreq());
                     }
                 } else {
-                    if (t.getValue().getTotalFreq() != null) {
-                        info.setTotalFreq(t.getValue().getTotalFreq());
+                    if (t2.getValue().getTotalFreq() != null) {
+                        t1.setTotalFreq(t2.getValue().getTotalFreq());
                     }
                 }
-                if (info.getTermFreq() != null && info.getTotalFreq() != null && info.getDocFreq() != null) {
-                    double tf = Math.sqrt(info.getTermFreq());
-                    double idf = Math.log((info.getTotalFreq() / (double) info.getDocFreq() + 1) + 1.0);
-                    info.setTfIdf(tf * idf);
+                Integer docFreq = t1.getDocFreq();
+                if (docFreq != null) {
+                    if (t2.getValue().getDocFreq() != null) {
+                        t1.setDocFreq(docFreq + t2.getValue().getDocFreq());
+                    }
+                } else {
+                    if (t2.getValue().getDocFreq() != null) {
+                        t1.setDocFreq(t2.getValue().getDocFreq());
+                    }
                 }
+                SummaryStatistics summaryStatistics = t1.getSummaryStatistics();
+                if (summaryStatistics != null) {
+                    if (t2.getValue().getSummaryStatistics() != null) {
+                        summaryStatistics.update(t2.getValue().getSummaryStatistics());
+                    }
+                } else {
+                    if (t2.getValue().getSummaryStatistics() != null) {
+                        t1.setSummaryStatistics(t2.getValue().getSummaryStatistics());
+                    }
+                }
+                map.put(t2.getKey(), t1);
             } else {
-                map.put(t.getKey(), t.getValue());
+                map.put(t2.getKey(), t2.getValue());
             }
         }
     }
 
     private SortedMap<String, TermInfo> sortTerm(final Map<String, TermInfo> map, Integer from, Integer size) {
-        /**
-         * Should be collator based
-         */
         Comparator<String> comp = new Comparator<String>() {
             @Override
             public int compare(String t1, String t2) {

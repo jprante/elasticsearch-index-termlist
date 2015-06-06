@@ -1,11 +1,10 @@
 package org.xbib.elasticsearch.rest.action.termlist;
 
-import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.count.CountResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
@@ -32,47 +31,31 @@ public class RestTermlistAction extends BaseRestHandler {
         super(settings, controller, client);
         controller.registerHandler(GET, "/_termlist", this);
         controller.registerHandler(GET, "/{index}/_termlist", this);
-        controller.registerHandler(GET, "/{index}/{field}/_termlist", this);
     }
 
     public void handleRequest(final RestRequest request, final RestChannel channel, final Client client) {
         try {
-            // count docs
-            CountRequestBuilder countRequestBuilder = new CountRequestBuilder(client)
-                    .setIndices(Strings.splitStringByCommaToArray(request.param("index")));
-            CountResponse countResponse = countRequestBuilder.execute().actionGet();
-            final long totalDocs = countResponse.getCount();
             TermlistRequest termlistRequest = new TermlistRequest(Strings.splitStringByCommaToArray(request.param("index")));
             termlistRequest.setField(request.param("field"));
             termlistRequest.setTerm(request.param("term"));
             termlistRequest.setFrom(request.paramAsInt("from", 0));
-            termlistRequest.setSize(request.paramAsInt("size", 0));
-            termlistRequest.setWithTermFreq(request.paramAsBoolean("termfreqs", false));
-            termlistRequest.setWithDocCount(request.paramAsBoolean("doccounts", false));
-            termlistRequest.setWithDocFreq(request.paramAsBoolean("docfreqs", false));
-            termlistRequest.setWithTotalFreq(request.paramAsBoolean("totalfreqs", false));
+            termlistRequest.setSize(request.paramAsInt("size", -1));
             termlistRequest.sortByDocFreq(request.paramAsBoolean("sortbydocfreqs", false));
             termlistRequest.sortByTotalFreq(request.paramAsBoolean("sortbytotalfreqs", false));
             termlistRequest.sortByTerm(request.paramAsBoolean("sortbyterms", false));
+            final long t0 = System.nanoTime();
             client.execute(TermlistAction.INSTANCE, termlistRequest, new RestBuilderListener<TermlistResponse>(channel) {
                 @Override
                 public RestResponse buildResponse(TermlistResponse response, XContentBuilder builder) throws Exception {
                     builder.startObject();
                     buildBroadcastShardsHeader(builder, response);
-                    builder.field("total", response.getSize());
+                    builder.field("took", (System.nanoTime() - t0) / 1000000);
+                    builder.field("numdocs", response.getNumDocs());
+                    builder.field("numterms", response.getTermlist().size());
                     builder.startArray("terms");
                     for (Map.Entry<String, TermInfo> t : response.getTermlist().entrySet()) {
-                        builder.startObject().field("name", t.getKey());
-                        if (t.getValue().getTermFreq() != null) {
-                            builder.field("termfreq", t.getValue().getTermFreq());
-                            builder.field("tfidf", t.getValue().getTfIdf());
-                        }
-                        if (t.getValue().getDocFreq() != null) {
-                            builder.field("docfreq", t.getValue().getDocFreq());
-                        }
-                        if (t.getValue().getTotalFreq() != null) {
-                            builder.field("totalfreq", t.getValue().getTotalFreq());
-                        }
+                        builder.startObject().field("term", t.getKey());
+                        t.getValue().toXContent(builder, ToXContent.EMPTY_PARAMS);
                         builder.endObject();
                     }
                     builder.endArray();

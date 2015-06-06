@@ -6,27 +6,17 @@ import org.elasticsearch.common.io.stream.Streamable;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.xbib.elasticsearch.common.termlist.math.SummaryStatistics;
 
 import java.io.IOException;
 
 public class TermInfo implements Streamable, ToXContent {
 
-    private Integer termFreq;
-
     private Integer docFreq;
 
     private Long totalFreq;
 
-    private Double tfidf;
-
-    public TermInfo setTermFreq(int termFreq) {
-        this.termFreq = termFreq;
-        return this;
-    }
-
-    public Integer getTermFreq() {
-        return termFreq;
-    }
+    private SummaryStatistics summaryStatistics;
 
     public TermInfo setDocFreq(int docFreq) {
         this.docFreq = docFreq;
@@ -46,22 +36,18 @@ public class TermInfo implements Streamable, ToXContent {
         return totalFreq;
     }
 
-    public TermInfo setTfIdf(double tfidf) {
-        this.tfidf = tfidf;
+    public TermInfo setSummaryStatistics(SummaryStatistics stat) {
+        this.summaryStatistics = stat;
         return this;
     }
 
-    public Double getTfIdf() {
-        return tfidf;
+    public SummaryStatistics getSummaryStatistics() {
+        return summaryStatistics;
     }
 
     @Override
     public void readFrom(StreamInput in) throws IOException {
         boolean b = in.readBoolean();
-        if (b) {
-            setTermFreq(in.readInt());
-        }
-        b = in.readBoolean();
         if (b) {
             setDocFreq(in.readInt());
         }
@@ -69,20 +55,12 @@ public class TermInfo implements Streamable, ToXContent {
         if (b) {
             setTotalFreq(in.readVLong());
         }
-        b = in.readBoolean();
-        if (b) {
-            setTfIdf(in.readDouble());
-        }
+        summaryStatistics = new SummaryStatistics();
+        summaryStatistics.readFrom(in);
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        if (termFreq != null) {
-            out.writeBoolean(true);
-            out.writeInt(termFreq);
-        } else {
-            out.writeBoolean(false);
-        }
         if (docFreq != null) {
             out.writeBoolean(true);
             out.writeInt(docFreq);
@@ -95,17 +73,12 @@ public class TermInfo implements Streamable, ToXContent {
         } else {
             out.writeBoolean(false);
         }
-        if (tfidf != null) {
-            out.writeBoolean(true);
-            out.writeDouble(tfidf);
-        } else {
-            out.writeBoolean(false);
-        }
+        summaryStatistics.writeTo(out);
     }
 
     public String toString() {
         try {
-            XContentBuilder builder = XContentFactory.jsonBuilder().prettyPrint();
+            XContentBuilder builder = XContentFactory.jsonBuilder();
             builder.startObject();
             toXContent(builder, EMPTY_PARAMS);
             builder.endObject();
@@ -117,17 +90,14 @@ public class TermInfo implements Streamable, ToXContent {
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        if (termFreq != null) {
-            builder.field("termFreq", termFreq);
+        if (totalFreq != null) {
+            builder.field("totalfreq", totalFreq);
         }
         if (docFreq != null) {
-            builder.field("docFreq", docFreq);
+            builder.field("docfreq", docFreq);
         }
-        if (totalFreq != null) {
-            builder.field("totalFreq", totalFreq);
-        }
-        if (tfidf != null) {
-            builder.field("tfidf", tfidf);
+        if (summaryStatistics != null) {
+            summaryStatistics.toXContent(builder, params);
         }
         return builder;
     }

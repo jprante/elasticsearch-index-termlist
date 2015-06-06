@@ -8,6 +8,7 @@ indexes.
 
 | Elasticsearch  | Plugin       | Release date |
 | -------------- | ------------ | ------------ |
+| 1.5.2          | 1.5.2.0      | Jun  5, 2015 |
 | 1.5.0          | 1.5.0.0      | Apr  9, 2015 |
 | 1.4.4          | 1.4.4.0      | Mar 15, 2015 |
 | 1.4.0          | 1.4.0.2      | Feb 19, 2015 |
@@ -18,7 +19,7 @@ indexes.
 
 ## Installation
 
-    ./bin/plugin -install index-termlist -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-index-termlist/1.5.0.0/elasticsearch-index-termlist-1.5.0.0-plugin.zip
+    ./bin/plugin -install index-termlist -url http://xbib.org/repository/org/xbib/elasticsearch/plugin/elasticsearch-index-termlist/1.5.2.0/elasticsearch-index-termlist-1.5.2.0-plugin.zip
 
 Do not forget to restart the node after installing.
 
@@ -34,6 +35,7 @@ All feedback is welcome! If you find issues, please post them at [Github](https:
 
 Getting the list of all terms indexed is useful for various purposes, for example
 
+- term statistics
 - building dictionaries
 - controlling the overall effects of analyzers on the indexed terms
 - automatic query building on indexed terms, e.g. for load tests
@@ -46,9 +48,68 @@ name as found in the Lucene index.
 Only terms of field names not starting with underscore are listed. Terms of internal fields
 like `_uid`, `_all`, or `_type` are always skipped.
 
+# Response
+
+For each term, statistics are computed.
+
+    {
+       "_shards": {
+          "total": 3,
+          "successful": 3,
+          "failed": 0
+       },
+       "took": 384,
+       "numdocs": 51279,
+       "numterms": 100,
+       "terms": [
+		  {
+			 "term": "aacr2",
+			 "totalfreq": 34699,
+			 "docfreq": 34697,
+			 "min": 1,
+			 "max": 2,
+			 "mean": 1.0000505458956723,
+			 "geomean": 1.0000399550985877,
+			 "sumofsquares": 34703,
+			 "sumoflogs": 1.3862943611198906,
+			 "sigma": 0.008475454987021664,
+			 "variance": 0.00007183333723703039
+		  }, ...
+           
+           
+`took` - milliseconds required for executing
+
+`numdocs` - the number of documents examined
+           
+`numterms` - the number of terms returned
+           
+`terms` - the array of term infos
+           
+`term` - the name of the term
+           
+`totalfreq` - the total number of occurrences of this term
+           
+`docfreq` - the document count where this term appears in
+            
+`min` - the minimum number of occurrences of this term in a document
+            
+`max` - the maximum number of occurrences of this term in a document 
+
+`mean` - the mean of the term occurences 
+
+`geomean` - the gemotric mean of the term occurrences
+
+`sumofsquares` - sum of the squares of the term occurrences
+
+`sumoflogs` - sum of the logarithms of the term occurences
+
+`variance` - the variance of the term occurences
+
+`sigma` - the standard deviation, equal to sqrt(variance)
+
 # Example
 
-Consider the following example index
+Consider the following example 
 
 	curl -XDELETE 'http://localhost:9200/test/'
 	curl -XPUT 'http://localhost:9200/test/'
@@ -59,36 +120,22 @@ Consider the following example index
 Get term list of index ``test``
 
 	curl -XGET 'http://localhost:9200/test/_termlist'
-	{"_shards":{"total":5,"successful":5,"failed":0},"total":6,"terms":[{"name":"search"},{"name":"prante"},{"name":"hello"},{"name":"world"},{"name":"jörg"},{"name":"elastic"}]}
 
 Get term list of index `test` of field `message`
 
 	curl -XGET 'http://localhost:9200/test/_termlist?field=message'
-	{"_shards":{"total":5,"successful":5,"failed":0},"total":2,"terms":[{"name":"elastic"},{"name":"search"}]}
 
-Get term list of index `test` with doc count
+Get term list of index `test` with total frequencies but only the first three of the list
 
-	curl -XGET 'http://localhost:9200/test/_termlist?totalfreqs'
-	{"_shards":{"total":5,"successful":5,"failed":0},"total":6,"terms":[{"name":"search","totalfreq":1},{"name":"prante","totalfreq":1},{"name":"hello","totalfreq":2},{"name":"world","totalfreq":1},{"name":"jörg","totalfreq":1},{"name":"elastic","totalfreq":1}]}
+	curl -XGET 'http://localhost:9200/test/_termlist?size=3'
 
-Get term list of index `test` with total frequencies
+Get term list of terms starting with `hello` in index `test` field `test`
 
-	curl -XGET 'http://localhost:9200/test/_termlist?totalfreqs'
-	{"_shards":{"total":5,"successful":5,"failed":0},"total":6,"terms":[{"name":"search","totalfreq":1},{"name":"prante","totalfreq":1},{"name":"hello","totalfreq":2},{"name":"world","totalfreq":1},{"name":"jörg","totalfreq":1},{"name":"elastic","totalfreq":1}]}
+	curl -XGET 'http://localhost:9200/test/_termlist?field=test&term=hello'
 
-Get term list of index `test` with total frequencies but only the first three terms of the list
+A page of 100 terms of a sorted list of terms in your index beginning with `a`
 
-	curl -XGET 'http://localhost:9200/test/_termlist?totalfreqs&size=3'
-	{"_shards":{"total":5,"successful":5,"failed":0},"total":6,"terms":[{"name":"prante","totalfreq":1},{"name":"hello","totalfreq":2},{"name":"world","totalfreq":1}]}
-
-Get term list of terms starting with `hello` in index `test` field `test`, with total frequencies. This can be useful to estimate hits.
-
-	curl -XGET 'http://localhost:9200/test/_termlist?field=test&term=hello&totalfreqs'
-	{"_shards":{"total":5,"successful":5,"failed":0},"total":1,"terms":[{"name":"hello","totalfreq":2}]}
-
-A complete sorted list of terms in your index beginning with `a`, pageable, complete with frequencies
-
-    curl -XGET 'http://localhost:9200/books/_termlist?term=a&totalfreqs&sortbyterms&pretty&from=0&size=100' 
+    curl -XGET 'http://localhost:9200/books/_termlist?term=a&sortbyterms&pretty&from=0&size=100' 
 
 # Caution
 
@@ -102,7 +149,7 @@ until it is restarted.
 
 Elasticsearch Term List Plugin
 
-Copyright (C) 2011 Jörg Prante
+Copyright (C) 2011-2015 Jörg Prante
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

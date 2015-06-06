@@ -33,25 +33,6 @@ public class TermlistRequestBuilder extends BroadcastOperationRequestBuilder<Ter
         return this;
     }
 
-    public TermlistRequestBuilder withDocCount() {
-        request.setWithDocCount(true);
-        return this;
-    }
-
-    public TermlistRequestBuilder withDocFreq() {
-        request.setWithDocFreq(true);
-        return this;
-    }
-
-    public TermlistRequestBuilder withTermFreq() {
-        request.setWithTermFreq(true);
-        return this;
-    }
-
-    public TermlistRequestBuilder withTotalFreq() {
-        request.setWithTotalFreq(true);
-        return this;
-    }
 
     public TermlistRequestBuilder sortByDocFreq(boolean sortByDocFreq) {
         request.sortByDocFreq(sortByDocFreq);

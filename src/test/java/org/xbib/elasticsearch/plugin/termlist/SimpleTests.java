@@ -44,14 +44,16 @@ public class SimpleTests extends Assert {
 
     @BeforeClass
     public void startNode() {
-        Settings finalSettings = settingsBuilder()
+        Settings settings = settingsBuilder()
                 .put("cluster.name", CLUSTER)
                 .put("discovery.zen.ping.multicast.enabled", false)
                 .put("node.local", true)
+                .put("index.number_of_shards", 1)
+                .put("index.number_of_replica", 0)
                 .put("index.store.type", "ram")
                 .put("gateway.type", "none")
                 .build();
-        node = nodeBuilder().settings(finalSettings).build().start();
+        node = nodeBuilder().settings(settings).build().start();
         client = node.client();
     }
 
@@ -85,9 +87,9 @@ public class SimpleTests extends Assert {
                 .setIndex("test")
                 .addMapping("docs", builder);
         createIndexRequestBuilder.execute().actionGet();
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 10; i++) {
             String content = join(makeList(), " ");
-            logger.info("{} -> {}", i, content);
+            //logger.info("{} -> {}", i, content);
             IndexRequestBuilder indexRequestBuilder = new IndexRequestBuilder(client)
                     .setIndex("test")
                     .setType("docs")
@@ -96,12 +98,8 @@ public class SimpleTests extends Assert {
             indexRequestBuilder.setRefresh(true).execute().actionGet();
         }
         TermlistRequestBuilder termlistRequestBuilder = new TermlistRequestBuilder(client);
-                //.withDocCount()
-                //.withDocFreq()
-                //.withTermFreq()
-                //.withTotalFreq();
         TermlistResponse termlistResponse = termlistRequestBuilder.execute().actionGet();
-        logger.info("{}", termlistResponse.getTermlist());
+        logger.info("termlist={}", termlistResponse.getTermlist());
     }
 
     private List<String> makeList() throws IOException {
@@ -118,7 +116,7 @@ public class SimpleTests extends Assert {
         }
         Random random = new Random();
         Collections.shuffle(list);
-        return list.subList(0, Math.min(100, random.nextInt(list.size())));
+        return list.subList(0, Math.min(10, random.nextInt(list.size())));
     }
 
     private String join(List<String> s, String delimiter) {
