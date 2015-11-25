@@ -30,6 +30,10 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
 
     private boolean sortByTotalFreq;
 
+    private int minDocFreq = 1;
+
+    private int minTotalFreq = 1;
+
     TermlistRequest() {
     }
 
@@ -91,6 +95,22 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
 
     public boolean sortByTotalFreq() {
         return sortByTotalFreq;
+    }
+
+    public int getMinDocFreq() {
+        return minDocFreq;
+    }
+
+    public void setMinDocFreq(int minDocFreq) {
+        this.minDocFreq = minDocFreq;
+    }
+
+    public int getMinTotalFreq() {
+        return minTotalFreq;
+    }
+
+    public void setMinTotalFreq(int minTotalFreq) {
+        this.minTotalFreq = minTotalFreq;
     }
 
     static TermlistRequest from(StreamInput in) throws IOException {

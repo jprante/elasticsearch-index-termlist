@@ -43,6 +43,8 @@ public class RestTermlistAction extends BaseRestHandler {
             termlistRequest.sortByDocFreq(request.paramAsBoolean("sortbydocfreqs", false));
             termlistRequest.sortByTotalFreq(request.paramAsBoolean("sortbytotalfreqs", false));
             termlistRequest.sortByTerm(request.paramAsBoolean("sortbyterms", false));
+            termlistRequest.setMinDocFreq(request.paramAsInt("minDocFreq", 1));
+            termlistRequest.setMinTotalFreq(request.paramAsInt("minTotalFreq", 1));
             final long t0 = System.nanoTime();
             client.execute(TermlistAction.INSTANCE, termlistRequest, new RestBuilderListener<TermlistResponse>(channel) {
                 @Override
