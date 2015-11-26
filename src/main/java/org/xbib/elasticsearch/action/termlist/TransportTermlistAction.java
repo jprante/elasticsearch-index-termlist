@@ -160,10 +160,10 @@ public class TransportTermlistAction
                             BytesRef text;
                             while ((text = termsEnum.next()) != null) {
                                 // skip invalid terms
-                                if (termsEnum.docFreq() < 1) {
+                                if (termsEnum.docFreq() < request.getRequest().getMinDocFreq()) {
                                     continue;
                                 }
-                                if (termsEnum.totalTermFreq() < 1) {
+                                if (termsEnum.totalTermFreq() < request.getRequest().getMinTotalFreq()) {
                                     continue;
                                 }
                                 // docFreq() = the number of documents containing the current term
