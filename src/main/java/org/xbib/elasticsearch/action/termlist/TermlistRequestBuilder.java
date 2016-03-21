@@ -1,16 +1,12 @@
 package org.xbib.elasticsearch.action.termlist;
 
-import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.support.broadcast.BroadcastOperationRequestBuilder;
-import org.elasticsearch.client.Client;
+import org.elasticsearch.action.ActionRequestBuilder;
+import org.elasticsearch.client.ElasticsearchClient;
 
-/**
- * A request to get termlists of one or more indices.
- */
-public class TermlistRequestBuilder extends BroadcastOperationRequestBuilder<TermlistRequest, TermlistResponse, TermlistRequestBuilder, Client> {
+public class TermlistRequestBuilder extends ActionRequestBuilder<TermlistRequest, TermlistResponse, TermlistRequestBuilder> {
 
-    public TermlistRequestBuilder(Client client) {
-        super(client, new TermlistRequest());
+    public TermlistRequestBuilder(ElasticsearchClient client) {
+        super(client, TermlistAction.INSTANCE, new TermlistRequest());
     }
 
     public TermlistRequestBuilder setField(String field) {
@@ -44,8 +40,4 @@ public class TermlistRequestBuilder extends BroadcastOperationRequestBuilder<Ter
         return this;
     }
 
-    @Override
-    protected void doExecute(ActionListener<TermlistResponse> listener) {
-        client.execute(TermlistAction.INSTANCE, request, listener);
-    }
 }

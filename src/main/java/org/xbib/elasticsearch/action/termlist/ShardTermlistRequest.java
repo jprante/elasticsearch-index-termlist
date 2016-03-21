@@ -1,13 +1,13 @@
 package org.xbib.elasticsearch.action.termlist;
 
-import org.elasticsearch.action.support.broadcast.BroadcastShardOperationRequest;
+import org.elasticsearch.action.support.broadcast.BroadcastShardRequest;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.index.shard.ShardId;
 
 import java.io.IOException;
 
-class ShardTermlistRequest extends BroadcastShardOperationRequest {
+public final class ShardTermlistRequest extends BroadcastShardRequest {
 
     private String index;
 

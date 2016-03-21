@@ -8,3 +8,8 @@
 /.settings
 /.classpath
 /.project
+/.gradle
+/build
+/plugins
+/.nb-gradle/
+/lib/

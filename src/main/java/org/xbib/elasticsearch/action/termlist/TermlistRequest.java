@@ -1,16 +1,22 @@
 package org.xbib.elasticsearch.action.termlist;
 
-import java.io.IOException;
-
-import org.elasticsearch.action.support.broadcast.BroadcastOperationRequest;
+import org.elasticsearch.action.ActionRequest;
+import org.elasticsearch.action.ActionRequestValidationException;
+import org.elasticsearch.action.support.broadcast.BroadcastRequest;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 
-public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> {
+import java.io.IOException;
+
+import static org.elasticsearch.action.ValidateActions.addValidationError;
+
+public final class TermlistRequest extends BroadcastRequest<TermlistRequest> {
 
     private String field;
 
     private String term;
+
+    private String index;
 
     private Integer from;
 
@@ -34,12 +40,28 @@ public class TermlistRequest extends BroadcastOperationRequest<TermlistRequest> 
 
     private int minTotalFreq = 1;
 
-    TermlistRequest() {
+    public TermlistRequest() {
     }
 
-    public TermlistRequest(String... indices) {
-        super(indices);
+
+    @Override
+    public ActionRequestValidationException validate() {
+        ActionRequestValidationException validationException = null;
+        if (term == null || term.isEmpty()) {
+            validationException = addValidationError("text is missing", null);
+        }
+        return validationException;
     }
+
+
+    public void setIndex(String index) {
+             this.index = index;
+        }
+
+    public String getIndex() {
+        return index;
+    }
+
 
     public void setField(String field) {
         this.field = field;
