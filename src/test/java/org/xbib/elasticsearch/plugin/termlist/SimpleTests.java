@@ -21,12 +21,14 @@ import org.xbib.elasticsearch.action.termlist.TermlistResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.StringTokenizer;
+import java.net.UnknownHostException;
 
 import static org.elasticsearch.common.settings.Settings.settingsBuilder;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
@@ -36,14 +38,19 @@ public class SimpleTests extends org.junit.Assert {
 
     private final static ESLogger logger = ESLoggerFactory.getLogger("test");
 
-    protected final String CLUSTER = "test-cluster-"; //+ //NetworkUtils.getLocalAddress().getHostName();
+    protected final String CLUSTER;
 
     private Node node;
 
     private Client client;
 
+    public SimpleTests() throws UnknownHostException {
+        CLUSTER = "test-cluster-"+ InetAddress.getLocalHost().getHostName() ;
+    }
+
     @BeforeClass
     public void startNode() {
+
         Settings settings = settingsBuilder()
                 .put("cluster.name", CLUSTER)
                 .put("discovery.zen.ping.multicast.enabled", false)
@@ -67,11 +74,11 @@ public class SimpleTests extends org.junit.Assert {
     @Test
     public void assertPluginLoaded() {
         NodesInfoResponse nodesInfoResponse = client.admin().cluster().prepareNodesInfo().setPlugins(true).get();
-        /*assertEquals(nodesInfoResponse.getNodes().length, 1);
-        assertNotNull(nodesInfoResponse.getNodes()[0].getPlugins().getInfos());
-        assertEquals(nodesInfoResponse.getNodes()[0].getPlugins().getInfos().size(), 1);
-        assertEquals(nodesInfoResponse.getNodes()[0].getPlugins().getInfos().get(0).isSite(), false);
-        assertTrue(nodesInfoResponse.getNodes()[0].getPlugins().getInfos().get(0).getName().startsWith("index-termlist"));*/
+        assertEquals(nodesInfoResponse.getNodes().length, 1);
+        assertNotNull(nodesInfoResponse.getNodes()[0].getPlugins().getPluginInfos());
+        assertEquals(nodesInfoResponse.getNodes()[0].getPlugins().getPluginInfos().size(), 1);
+        assertEquals(nodesInfoResponse.getNodes()[0].getPlugins().getPluginInfos().get(0).isSite(), false);
+        assertTrue(nodesInfoResponse.getNodes()[0].getPlugins().getPluginInfos().get(0).getName().startsWith("index-termlist"));
     }
 
     @Test
