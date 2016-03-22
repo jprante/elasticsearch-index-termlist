@@ -1,11 +1,6 @@
 package org.xbib.elasticsearch.action.termlist;
 
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import org.apache.lucene.index.DocsAndPositionsEnum;
@@ -21,11 +16,12 @@ import org.elasticsearch.action.ShardOperationFailedException;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.DefaultShardOperationFailedException;
 import org.elasticsearch.action.support.broadcast.BroadcastShardOperationFailedException;
-import org.elasticsearch.action.support.broadcast.TransportBroadcastOperationAction;
+import org.elasticsearch.action.support.broadcast.TransportBroadcastAction;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.block.ClusterBlockException;
 import org.elasticsearch.cluster.block.ClusterBlockLevel;
+import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.routing.GroupShardsIterator;
 import org.elasticsearch.cluster.routing.ShardRouting;
 import org.elasticsearch.common.inject.Inject;
@@ -39,14 +35,13 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 import org.xbib.elasticsearch.common.termlist.CompactHashMap;
 import org.xbib.elasticsearch.common.termlist.math.SummaryStatistics;
-
-import static org.elasticsearch.common.collect.Lists.newLinkedList;
+//import static org.elasticsearch.common.collect.;
 
 /**
  * Termlist index/indices action.
  */
 public class TransportTermlistAction
-        extends TransportBroadcastOperationAction<TermlistRequest, TermlistResponse, ShardTermlistRequest, ShardTermlistResponse> {
+        extends TransportBroadcastAction<TermlistRequest, TermlistResponse, ShardTermlistRequest, ShardTermlistResponse> {
 
     private final static ESLogger logger = ESLoggerFactory.getLogger(TransportTermlistAction.class.getName());
 
@@ -56,20 +51,12 @@ public class TransportTermlistAction
     public TransportTermlistAction(Settings settings, ThreadPool threadPool, ClusterService clusterService,
                                    TransportService transportService,
                                    IndicesService indicesService,
-                                   ActionFilters actionFilters) {
-        super(settings, TermlistAction.NAME, threadPool, clusterService, transportService, actionFilters);
+                                   ActionFilters actionFilters, IndexNameExpressionResolver indexNameExpressionResolver) {
+        super(settings, TermlistAction.NAME, threadPool, clusterService, transportService, actionFilters,
+                    indexNameExpressionResolver,TermlistRequest.class,ShardTermlistRequest.class,ThreadPool.Names.GENERIC );
         this.indicesService = indicesService;
     }
 
-    @Override
-    protected String executor() {
-        return ThreadPool.Names.GENERIC;
-    }
-
-    @Override
-    protected TermlistRequest newRequest() {
-        return new TermlistRequest();
-    }
 
     @Override
     protected TermlistResponse newResponse(TermlistRequest request, AtomicReferenceArray shardsResponses, ClusterState clusterState) {
@@ -85,7 +72,7 @@ public class TransportTermlistAction
                 logger.error(e.getMessage(), e);
                 failedShards++;
                 if (shardFailures == null) {
-                    shardFailures = newLinkedList();
+                    shardFailures = new ArrayList<ShardOperationFailedException>();
                 }
                 shardFailures.add(new DefaultShardOperationFailedException(e));
             } else {
@@ -103,11 +90,6 @@ public class TransportTermlistAction
                                 request.getSize() >= 0 ? truncate(map, request.getFrom(), request.getSize()) : map;
 
         return new TermlistResponse(shardsResponses.length(), successfulShards, failedShards, shardFailures, numdocs, map);
-    }
-
-    @Override
-    protected ShardTermlistRequest newShardRequest() {
-        return new ShardTermlistRequest();
     }
 
     @Override
@@ -130,12 +112,12 @@ public class TransportTermlistAction
 
     @Override
     protected ClusterBlockException checkGlobalBlock(ClusterState state, TermlistRequest request) {
-        return state.blocks().globalBlockedException(ClusterBlockLevel.METADATA);
+        return state.blocks().globalBlockedException(ClusterBlockLevel.METADATA_READ);
     }
 
     @Override
     protected ClusterBlockException checkRequestBlock(ClusterState state, TermlistRequest request, String[] concreteIndices) {
-        return state.blocks().indicesBlockedException(ClusterBlockLevel.METADATA, concreteIndices);
+        return state.blocks().indicesBlockedException(ClusterBlockLevel.METADATA_READ, concreteIndices);
     }
 
     @Override
@@ -156,7 +138,7 @@ public class TransportTermlistAction
                         Terms terms = fields.terms(field);
                         // Returns the number of documents that have at least one
                         if (terms != null) {
-                            TermsEnum termsEnum = terms.iterator(null);
+                            TermsEnum termsEnum = terms.iterator();
                             BytesRef text;
                             while ((text = termsEnum.next()) != null) {
                                 // skip invalid terms
