@@ -6,15 +6,8 @@ import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.rest.BaseRestHandler;
-import org.elasticsearch.rest.BytesRestResponse;
-import org.elasticsearch.rest.RestChannel;
-import org.elasticsearch.rest.RestController;
-import org.elasticsearch.rest.RestRequest;
-import org.elasticsearch.rest.RestResponse;
-import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.rest.*;
 import org.elasticsearch.rest.action.support.RestBuilderListener;
-import org.elasticsearch.rest.action.support.RestStatusToXContentListener;
 import org.xbib.elasticsearch.action.termlist.TermInfo;
 import org.xbib.elasticsearch.action.termlist.TermlistAction;
 import org.xbib.elasticsearch.action.termlist.TermlistRequest;
@@ -37,11 +30,12 @@ public class RestTermlistAction extends BaseRestHandler {
 
     public void handleRequest(final RestRequest request, final RestChannel channel, final Client client) {
         try {
-            TermlistRequest termlistRequest = new TermlistRequest(/*Strings.splitStringByCommaToArray(request.param("index"))*/);
+            TermlistRequest termlistRequest = new TermlistRequest(Strings.splitStringByCommaToArray(request.param("index")));
             termlistRequest.setField(request.param("field"));
             termlistRequest.setTerm(request.param("term"));
             termlistRequest.setFrom(request.paramAsInt("from", 0));
             termlistRequest.setSize(request.paramAsInt("size", -1));
+            termlistRequest.setBackTracingCount(request.paramAsInt("backtracingcount", 0));
             termlistRequest.sortByDocFreq(request.paramAsBoolean("sortbydocfreqs", false));
             termlistRequest.sortByTotalFreq(request.paramAsBoolean("sortbytotalfreqs", false));
             termlistRequest.sortByTerm(request.paramAsBoolean("sortbyterms", false));

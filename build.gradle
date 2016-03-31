@@ -1,5 +1,5 @@
 group = 'org.xbib.elasticsearch.plugin'
-version = '2.2.0.2'
+version = '2.3.0.0'
 
 ext {
     pluginName = 'termlist'
@@ -11,10 +11,10 @@ ext {
     scmConnection = 'scm:git:git://github.com/' + user + '/' + name + '.git'
     scmDeveloperConnection = 'scm:git:git://github.com/' + user + '/' + name + '.git'
     versions = [
-            'elasticsearch' : '2.2.0',
-            'jackson': '2.6.2',
+            'elasticsearch' : '2.3.0',
             'log4j': '2.5',
-            'junit' : '4.12'
+            'junit' : '4.12',
+            'testng' : '6.9.10'
     ]
 }
 
@@ -64,6 +64,7 @@ configurations {
 dependencies {
     compile "org.elasticsearch:elasticsearch:${versions.elasticsearch}"
     testCompile "junit:junit:${versions.junit}"
+    testCompile "org.testng:testng:${versions.testng}"
     testCompile "org.apache.logging.log4j:log4j-slf4j-impl:${versions.log4j}"
     testCompile "org.apache.logging.log4j:log4j-core:${versions.log4j}"
     wagon 'org.apache.maven.wagon:wagon-ssh-external:2.10'

@@ -8,7 +8,8 @@ indexes.
 
 | Elasticsearch  | Plugin       | Release date |
 | -------------- | ------------ | ------------ |
-| 2.2.0          | 2.2.0.2      | May 22, 2016 |     
+| 2.3.0          | 2.3.0.0      | March 29, 2016 |     
+| 2.2.0          | 2.2.0.2      | March 22, 2016 |     
 | 1.5.2          | 1.5.2.0      | Jun  5, 2015 |
 | 1.5.0          | 1.5.0.0      | Apr  9, 2015 |
 | 1.4.4          | 1.4.4.0      | Mar 15, 2015 |
@@ -137,6 +138,10 @@ Get term list of terms starting with `hello` in index `test` field `test`
 A page of 100 terms of a sorted list of terms in your index beginning with `a`
 
     curl -XGET 'http://localhost:9200/books/_termlist?term=a&sortbyterms&pretty&from=0&size=100' 
+	
+A page of 100 terms of a sorted list of terms in your index beginning with `frodo`,'frod','fro' and 'fr', since your backtracingcount is set to 3
+
+    curl -XGET 'http://localhost:9200/books/_termlist?term=frodo&sortbyterms&pretty&from=0&size=100*backtracingcount=3' 
 
 # Caution
 
