@@ -1,15 +1,7 @@
 package org.xbib.elasticsearch.action.termlist;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicReferenceArray;
-
-import org.apache.lucene.index.DocsAndPositionsEnum;
-import org.apache.lucene.index.Fields;
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.MultiFields;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.index.Terms;
-import org.apache.lucene.index.TermsEnum;
+import org.apache.lucene.index.*;
+import org.apache.lucene.search.spell.LevensteinDistance;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ShardOperationFailedException;
@@ -35,6 +27,9 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 import org.xbib.elasticsearch.common.termlist.CompactHashMap;
 import org.xbib.elasticsearch.common.termlist.math.SummaryStatistics;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 //import static org.elasticsearch.common.collect.;
 
 /**
@@ -53,7 +48,7 @@ public class TransportTermlistAction
                                    IndicesService indicesService,
                                    ActionFilters actionFilters, IndexNameExpressionResolver indexNameExpressionResolver) {
         super(settings, TermlistAction.NAME, threadPool, clusterService, transportService, actionFilters,
-                    indexNameExpressionResolver,TermlistRequest.class,ShardTermlistRequest.class,ThreadPool.Names.GENERIC );
+                indexNameExpressionResolver, TermlistRequest.class, ShardTermlistRequest.class, ThreadPool.Names.GENERIC);
         this.indicesService = indicesService;
     }
 
@@ -68,7 +63,7 @@ public class TransportTermlistAction
         for (int i = 0; i < shardsResponses.length(); i++) {
             Object shardResponse = shardsResponses.get(i);
             if (shardResponse instanceof BroadcastShardOperationFailedException) {
-                BroadcastShardOperationFailedException e = (BroadcastShardOperationFailedException)shardResponse;
+                BroadcastShardOperationFailedException e = (BroadcastShardOperationFailedException) shardResponse;
                 logger.error(e.getMessage(), e);
                 failedShards++;
                 if (shardFailures == null) {
@@ -84,13 +79,15 @@ public class TransportTermlistAction
                 }
             }
         }
-        map = request.sortByTotalFreq() ? sortTotalFreq(map, request.getFrom(), request.getSize()) :
-                request.sortByDocFreq() ? sortDocFreq(map, request.getFrom(), request.getSize()) :
-                        request.sortByTerm() ? sortTerm(map, request.getFrom(), request.getSize()) :
-                                request.getSize() >= 0 ? truncate(map, request.getFrom(), request.getSize()) : map;
+        map = request.sortByTotalFreq() ? sortTotalFreq(map, request.getFrom(), request.getSize()) : map;
+        map = request.sortByDocFreq() ? sortDocFreq(map, request.getFrom(), request.getSize()) : map;
+        map = request.sortByTerm() ? sortTerm(map, request.getTerm(), request.getFrom(), request.getSize(), request.getBackTracingCount()) : map;
+
+        //map = request.getSize() >= 0 ? truncate(map, request.sortByTerm(), request.getTerm(), request.getFrom(), request.getSize()) : map;
 
         return new TermlistResponse(shardsResponses.length(), successfulShards, failedShards, shardFailures, numdocs, map);
     }
+
 
     @Override
     protected ShardTermlistRequest newShardRequest(int numShards, ShardRouting shard, TermlistRequest request) {
@@ -120,12 +117,35 @@ public class TransportTermlistAction
         return state.blocks().indicesBlockedException(ClusterBlockLevel.METADATA_READ, concreteIndices);
     }
 
+    boolean anyMatch(ArrayList<String> arrList, String indexTerm) {
+        for (String term : arrList) {
+            if (indexTerm.startsWith(term))
+                return true;
+        }
+        return false;
+    }
+
     @Override
     protected ShardTermlistResponse shardOperation(ShardTermlistRequest request) throws ElasticsearchException {
         IndexShard indexShard = indicesService.indexServiceSafe(request.getIndex()).shardSafe(request.shardId().id());
         Engine.Searcher searcher = indexShard.engine().acquireSearcher("termlist");
         try {
             Map<String, TermInfo> map = new CompactHashMap<String, TermInfo>();
+            ArrayList<String> stringsToSearch = new ArrayList<String>();
+            if (request.getRequest().getTerm() != null) {
+                String requestTerm = request.getRequest().getTerm();
+                int backtracingCount = request.getRequest().getBackTracingCount();
+                stringsToSearch.add(requestTerm);
+                int index = 1;
+                while (backtracingCount > 0) {
+                    if (requestTerm.length() > index)
+                        stringsToSearch.add(requestTerm.substring(0, requestTerm.length() - index));
+                    else
+                        break;
+                    index++;
+                    backtracingCount--;
+                }
+            }
             IndexReader reader = searcher.reader();
             Fields fields = MultiFields.getFields(reader);
             if (fields != null) {
@@ -151,11 +171,11 @@ public class TransportTermlistAction
                                 // docFreq() = the number of documents containing the current term
                                 // totalTermFreq() = total number of occurrences of this term across all documents
                                 Term term = new Term(field, text);
-                                if (request.getRequest().getTerm() == null || term.text().startsWith(request.getRequest().getTerm())) {
+                                if (request.getRequest().getTerm() == null || anyMatch(stringsToSearch, term.text())) {
                                     TermInfo termInfo = new TermInfo();
-                                    DocsAndPositionsEnum docPosEnum = termsEnum.docsAndPositions(null, null);
+                                    org.apache.lucene.index.PostingsEnum docPosEnum = termsEnum.postings(null);
                                     SummaryStatistics stat = new SummaryStatistics();
-                                    while (docPosEnum.nextDoc() != DocsAndPositionsEnum.NO_MORE_DOCS) {
+                                    while (docPosEnum.nextDoc() != PostingsEnum.NO_MORE_DOCS) {
                                         stat.addValue(docPosEnum.freq());
                                     }
                                     termInfo.setSummaryStatistics(stat);
@@ -218,27 +238,7 @@ public class TransportTermlistAction
         }
     }
 
-    private SortedMap<String, TermInfo> sortTerm(final Map<String, TermInfo> map, Integer from, Integer size) {
-        Comparator<String> comp = new Comparator<String>() {
-            @Override
-            public int compare(String t1, String t2) {
-                return t1.compareTo(t2);
-            }
-        };
-        TreeMap<String, TermInfo> m = new TreeMap<String, TermInfo>(comp);
-        m.putAll(map);
-        if (size != null && size > 0) {
-            TreeMap<String, TermInfo> treeMap = new TreeMap<String, TermInfo>(comp);
-            for (int i = 0; i < m.size(); i++) {
-                Map.Entry<String, TermInfo> me = m.pollFirstEntry();
-                if (from <= i && i < from + size) {
-                    treeMap.put(me.getKey(), me.getValue());
-                }
-            }
-            return treeMap;
-        }
-        return m;
-    }
+
     private SortedMap<String, TermInfo> sortTotalFreq(final Map<String, TermInfo> map, Integer from, Integer size) {
         Comparator<String> comp = new Comparator<String>() {
             @Override
@@ -248,7 +248,7 @@ public class TransportTermlistAction
                 String s1 = sl1.length() + sl1 + t1;
                 Long l2 = map.get(t2).getTotalFreq();
                 String sl2 = Long.toString(l2);
-                String s2 =sl2.length() + sl2 + t2;
+                String s2 = sl2.length() + sl2 + t2;
                 return -s1.compareTo(s2);
             }
         };
@@ -295,13 +295,70 @@ public class TransportTermlistAction
         return m;
     }
 
-    private Map<String, TermInfo> truncate(Map<String, TermInfo> source, Integer from, Integer size) {
+    private Integer findFromLoc(Map<String, TermInfo> source, String term, Integer from, Integer size) {
+        if (source.size() < size)
+            return from;
+
+        Integer position = 0;
+        float highDistance = 0;
+        LevensteinDistance distanceCalculator = new LevensteinDistance();
+        Iterator<Map.Entry<String, TermInfo>> it = source.entrySet().iterator();
+
+        for (int i = 0; i < source.size(); i++) {
+            Map.Entry<String, TermInfo> entry = it.next();
+
+            float currdis = distanceCalculator.getDistance(term, entry.getKey());
+
+            if (currdis >= highDistance) {
+                highDistance = currdis;
+                position = i;
+            }
+        }
+        return (position - (size / 2)) < 0 ? 0 : position - (size / 2);
+    }
+
+    private SortedMap<String, TermInfo> sortTerm(final Map<String, TermInfo> map, String term, Integer from, Integer size, Integer backtrackingCount) {
+        Comparator<String> comp = new Comparator<String>() {
+            @Override
+            public int compare(String t1, String t2) {
+                return t1.compareTo(t2);
+            }
+        };
+        TreeMap<String, TermInfo> m = new TreeMap<String, TermInfo>(comp);
+        m.putAll(map);
+
+        if (size == null || size < 1) {
+            return m;
+        }
+
+        if (backtrackingCount > 0) {
+            from = findFromLoc(m, term, from, size);
+        }
+
+        TreeMap<String, TermInfo> treeMap = new TreeMap<String, TermInfo>(comp);
+        int mapsize = m.size();
+        for (int i = 0; i < mapsize; i++) {
+            Map.Entry<String, TermInfo> me = m.pollFirstEntry();
+            if (i >= from && i < from + size) {
+                treeMap.put(me.getKey(), me.getValue());
+            }
+        }
+        return treeMap;
+    }
+
+
+    private Map<String, TermInfo> truncate(Map<String, TermInfo> source, boolean sortByTerm, String term, Integer from, Integer size) {
         if (size == null || size < 1) {
             return source;
         }
-        Map<String, TermInfo> target = new CompactHashMap<String, TermInfo>();
+        if (sortByTerm) {
+            from = findFromLoc(source, term, from, size);
+            logger.error("the from loc i got was " + from);
+        }
+
+        TreeMap<String, TermInfo> target = new TreeMap<String, TermInfo>();
         Iterator<Map.Entry<String, TermInfo>> it = source.entrySet().iterator();
-        for (int i = 0 ; i < source.size(); i++) {
+        for (int i = 0; i < source.size(); i++) {
             Map.Entry<String, TermInfo> entry = it.next();
             if (from <= i && i < from + size) {
                 target.put(entry.getKey(), entry.getValue());

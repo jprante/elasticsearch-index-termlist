@@ -40,7 +40,22 @@ public final class TermlistRequest extends BroadcastRequest<TermlistRequest> {
 
     private int minTotalFreq = 1;
 
-    public TermlistRequest() {
+    public int getBackTracingCount() {
+        return backTracingCount;
+    }
+
+    public void setBackTracingCount(int backTracingCount) {
+        this.backTracingCount = backTracingCount;
+    }
+
+    private int backTracingCount = 0;
+
+
+    public TermlistRequest(){
+
+    }
+    public TermlistRequest(String... indices) {
+        super(indices);
     }
 
 
@@ -148,6 +163,7 @@ public final class TermlistRequest extends BroadcastRequest<TermlistRequest> {
         term = in.readOptionalString();
         from = in.readInt();
         size = in.readInt();
+        backTracingCount = in.readInt();
         withTermFreq = in.readBoolean();
         withDocCount = in.readBoolean();
         withDocFreq = in.readBoolean();
@@ -155,7 +171,6 @@ public final class TermlistRequest extends BroadcastRequest<TermlistRequest> {
         sortByTerm = in.readBoolean();
         sortByDocFreq = in.readBoolean();
         sortByTotalFreq = in.readBoolean();
-
     }
 
     @Override
@@ -165,6 +180,7 @@ public final class TermlistRequest extends BroadcastRequest<TermlistRequest> {
         out.writeOptionalString(term);
         out.writeInt(from);
         out.writeInt(size);
+        out.writeInt(backTracingCount);
         out.writeBoolean(withTermFreq);
         out.writeBoolean(withDocCount);
         out.writeBoolean(withDocFreq);
