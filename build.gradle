@@ -1,143 +1,74 @@
-group = 'org.xbib.elasticsearch.plugin'
-version = '2.3.0.0'
-
-ext {
-    pluginName = 'termlist'
-    pluginClassname  = 'org.xbib.elasticsearch.plugin.termlist.TermlistPlugin'
-    pluginDescription = 'Termlist for Elasticsearch'
-    user = 'charvind'
-    name = 'elasticsearch-index-termlist'
-    scmUrl = 'https://github.com/' + user + '/' + name
-    scmConnection = 'scm:git:git://github.com/' + user + '/' + name + '.git'
-    scmDeveloperConnection = 'scm:git:git://github.com/' + user + '/' + name + '.git'
-    versions = [
-            'elasticsearch' : '2.3.0',
-            'log4j': '2.5',
-            'junit' : '4.12',
-            'testng' : '6.9.10'
-    ]
-}
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
 
 buildscript {
     repositories {
-        mavenLocal()
-        mavenCentral()
         jcenter()
         maven {
-            url "http://xbib.org/repository"
+            url 'http://xbib.org/repository'
         }
     }
     dependencies {
-        classpath 'org.ajoberstar:gradle-git:1.4.2'
-        classpath 'co.riiid:gradle-github-plugin:0.4.2'
-        classpath 'io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.5.3'
+        classpath "org.elasticsearch.gradle:build-tools:6.5.4"
     }
 }
 
 apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'signing'
-apply plugin: 'co.riiid.gradle'
+apply plugin: 'idea'
+apply plugin: 'elasticsearch.esplugin'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url "http://xbib.org/repository"
-    }
+esplugin {
+    description 'Termlist plugin for Elasticsearch'
+    name 'elasticsearch-index-termlist'
+    classname 'org.xbib.elasticsearch.plugin.termlist.TermlistPlugin'
 }
-
 
 configurations {
     wagon
-    releaseJars {
-        extendsFrom runtime
-        exclude group: 'org.elasticsearch'
-        exclude module: 'jna'
-        exclude module: 'jackson-core'
-        exclude module: 'jackson-dataformat-smile'
-        exclude module: 'jackson-dataformat-yaml'
-    }
 }
 
 dependencies {
-    compile "org.elasticsearch:elasticsearch:${versions.elasticsearch}"
-    testCompile "junit:junit:${versions.junit}"
-    testCompile "org.testng:testng:${versions.testng}"
-    testCompile "org.apache.logging.log4j:log4j-slf4j-impl:${versions.log4j}"
-    testCompile "org.apache.logging.log4j:log4j-core:${versions.log4j}"
-    wagon 'org.apache.maven.wagon:wagon-ssh-external:2.10'
+    compileOnly "org.apache.logging.log4j:log4j-core:${project.property(('log4j.version'))}"
+    testCompile "org.elasticsearch:elasticsearch:${project.property('elasticsearch.version')}"
+    testCompile "org.codelibs.elasticsearch.module:analysis-common:${project.property('elasticsearch.version')}"
+    testCompile "junit:junit:${project.property('junit.version')}"
+    wagon "org.apache.maven.wagon:wagon-ssh:${project.property('wagon.version')}"
 }
 
-sourceCompatibility = 1.7
-targetCompatibility = 1.7
-
-tasks.withType(JavaCompile) {
-    options.compilerArgs << "-Xlint:unchecked,deprecation"
-}
-
-test {
-    systemProperties['path.home'] = System.getProperty("user.dir")
-    testLogging {
-        showStandardStreams = false
-        exceptionFormat = 'full'
+jar {
+    manifest {
+        attributes(
+                'Implementation-Title': "${project.group}#${project.name};${project.version}",
+                'Implementation-Version': version,
+                'Implementation-Vendor': "xbib",
+                'Build-Date': ZonedDateTime.now(ZoneOffset.UTC),
+                'Build-Java-Version': System.getProperty("java.version"),
+                'X-Compile-Source-JDK': compileJava.targetCompatibility,
+                'X-Compile-Target-JDK': compileJava.sourceCompatibility,
+                'X-Compile-Elasticsearch-Version': version,
+                'X-Compile-Lucene-Version': project.property('lucene.version'),
+                'X-Compile-Elasticsearch-Snapshot': false
+        )
     }
 }
 
-task makePluginDescriptor(type: Copy) {
-    from 'src/main/templates'
-    into 'build/tmp/plugin'
-    expand([
-            'descriptor': [
-                'name': pluginName,
-                'classname': pluginClassname,
-                'description': pluginDescription,
-                'jvm': true,
-                'site': false,
-                'isolated': true,
-                'version': project.property('version'),
-                'javaVersion': project.property('targetCompatibility'),
-                'elasticsearchVersion' : versions.elasticsearch
-            ]
-    ])
+test {
+    enabled = true
 }
 
-task buildPluginZip(type: Zip, dependsOn: [':jar', ':makePluginDescriptor']) {
-    from files(libsDir)
-    from configurations.releaseJars
-    from 'build/tmp/plugin'
-    classifier 'plugin'
+integTest {
+    enabled = false
 }
-
-task unpackPlugin(type: Copy, dependsOn: [':buildPluginZip']) {
-    delete "plugins"
-    from files(libsDir)
-    from configurations.releaseJars
-    from 'build/tmp/plugin'
-    into "plugins/${pluginName}"
-}
-
 
 clean {
-    delete "plugins"
-    delete "logs"
-}
-
-task javadocJar(type: Jar, dependsOn: classes) {
-    from javadoc
-    into "build/tmp"
-    classifier 'javadoc'
-}
-
-task sourcesJar(type: Jar, dependsOn: classes) {
-    from sourceSets.main.allSource
-    into "build/tmp"
-    classifier 'sources'
+    delete 'out'
+    delete fileTree('.') { include '.local*.log' }
 }
 
 artifacts {
-    archives javadocJar, sourcesJar, buildPluginZip
+    archives javadocJar, sourcesJar
 }
 
 if (project.hasProperty('signing.keyId')) {
@@ -146,7 +77,9 @@ if (project.hasProperty('signing.keyId')) {
     }
 }
 
-ext.grgit = org.ajoberstar.grgit.Grgit.open()
-
-apply from: 'gradle/git.gradle'
-apply from: 'gradle/publish.gradle'
+licenseFile = rootProject.file('LICENSE.txt')
+noticeFile = rootProject.file('NOTICE.txt')
+checkstyleMain.source = 'src/main/java'
+forbiddenApisMain.enabled = false
+forbiddenApisTest.enabled = false
+licenseHeaders.enabled = false
